@@ -91,8 +91,6 @@ DATABASES = {
 AUTH_USER_MODEL = 'apartment.User'
 
 
-
-
 #driver kết nối với database
 
 import pymysql
