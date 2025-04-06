@@ -16,7 +16,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 #Tạo thư mục media để lưu file ảnh
 
-MEDIA_ROOT = '%s/aparment/static/' % BASE_DIR
+MEDIA_ROOT = '%s/apartment/static/' % BASE_DIR
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -40,6 +40,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'apartment.apps.ApartmentConfig',
+    'ckeditor',
+    'ckeditor_uploader',
+
 ]
 
 MIDDLEWARE = [
@@ -90,6 +93,8 @@ DATABASES = {
 
 AUTH_USER_MODEL = 'apartment.User'
 
+#CKeditor
+CKEDITOR_UPLOAD_PATH = "ckeditor/pay/"
 
 #driver kết nối với database
 
@@ -136,3 +141,5 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
