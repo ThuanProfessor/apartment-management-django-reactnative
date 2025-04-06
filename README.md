@@ -1,4 +1,4 @@
 # apartment-management-django-reactnative
 <ul>
-  <li></li>
+  Nhánh này dùng để test models
 </ul>
