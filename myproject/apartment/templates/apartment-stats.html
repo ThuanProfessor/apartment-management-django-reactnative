@@ -1,0 +1,90 @@
+{% extends "admin/base_site.html" %} {% load i18n static %} {% block extrastyle
+%}
+
+<link
+  rel="stylesheet"
+  href="{% static 'apartment/css/apartment-stats.css' %}"
+/>
+
+{% endblock %} {% block content %}
+<div class="stats-container">
+  <h2>Apartment Statistics</h2>
+
+  <div class="total-stats">
+    <div class="stat-box">
+      <h3>Total Apartments</h3>
+      <p>{{ total_apartments }}</p>
+    </div>
+    <div class="stat-box">
+      <h3>Empty Apartments</h3>
+      <p>{{ empty_apartments }}</p>
+    </div>
+    <div class="stat-box">
+      <h3>Occupied Apartments</h3>
+      <p>{{ total_apartments|add:"-empty_apartments" }}</p>
+    </div>
+  </div>
+
+  <table class="stats-table">
+    <thead>
+      <tr>
+        <th>User ID</th>
+        <th>Username</th>
+        <th>Number of Apartments</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for stat in stats %}
+      <tr>
+        <td>{{ stat.id }}</td>
+        <td>{{ stat.username }}</td>
+        <td>{{ stat.apm_count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div style="width: 50%">
+  <canvas id="myChart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  let data = [];
+  let labels = [];
+
+  {% for s in stats %}
+    data.push({{ s.apm_count }});
+    labels.push('{{ s.username }}');
+  {% endfor %}
+
+
+  window.onload = function () {
+    const ctx = document.getElementById("myChart");
+
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Number of Apartments",
+            data: data,
+            borderWidth: 1,
+            backgroundColor: ["red", "green", "blue", "yellow"],
+          },
+        ],
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true,
+          },
+        },
+      },
+    });
+  };
+</script>
+{% endblock %}
