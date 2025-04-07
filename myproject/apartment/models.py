@@ -1,8 +1,10 @@
+from urllib import response
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from ckeditor.fields import RichTextField
 
 
-class BaseModel(models.Model):
+class BaseModel(models.Model): 
     active = models.BooleanField(default=True, verbose_name="Trạng thái hoạt động")
     created_date = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo")
     updated_date = models.DateTimeField(auto_now=True, verbose_name="Ngày cập nhật")
@@ -12,9 +14,6 @@ class BaseModel(models.Model):
 
     def __str__(self):
         return f"{self.id} - {self.created_date}"
-    
-
-
     
 
 class User(AbstractUser, BaseModel):
@@ -28,15 +27,23 @@ class User(AbstractUser, BaseModel):
     avatar = models.ImageField(upload_to='avatars/%Y/%m/', null=True, blank=True)
     phone = models.CharField(max_length=15, null=True, blank=True)
     apartment = models.OneToOneField('Apartment', on_delete=models.SET_NULL, null=True, blank=True)
+    is_first_login = models.BooleanField(default=True, verbose_name="Lần đầu đăng nhập")
+    
 
     def __str__(self):
         return self.username
     
 
 class Apartment(BaseModel):
+    STATUS_CHOICES = (
+        ('vailable', 'Còn trống'),
+        ('not_available', 'Đã cho thuê'),
+    )
     number = models.CharField(max_length=10, unique=True, null=True)
     floor = models.IntegerField()
-    description = models.TextField(null=True, blank=True)
+    description = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
+    # user = models.ManyToManyField('User', on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return self.number
@@ -48,6 +55,9 @@ class RelativeCard(BaseModel):
     card_number = models.CharField(max_length=20)
     resident = models.ForeignKey(User, on_delete=models.CASCADE)
     
+    def __str__(self):
+        return f"{self.name} - {self.relationship} ({self.card_number})"
+    
     
 class Bill(BaseModel):
     PAYMENT_METHOD_CHOICE = (
@@ -57,14 +67,22 @@ class Bill(BaseModel):
     STATUS_CHOICE = (
         ('pending', 'Chờ thanh toán'),
         ('paid', 'Đã thanh toán'),
+        ('overdue', 'Quá hạn'),
+    )
+    BILL_TYPE_CHOICES = (
+        ('management_fee', 'Phí quản lý'),
+        ('parking_fee', 'Phí gửi xe'),
+        ('service_fee', 'Phí dịch vụ'),
     )
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bills')
+    bill_type = models.CharField(max_length=20, choices=BILL_TYPE_CHOICES, default='management_fee')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.CharField(max_length=255, null=True)
     payment_method = models.CharField(max_length=50, choices=PAYMENT_METHOD_CHOICE)
     payment_proof = models.ImageField(upload_to='pay/%Y/%m/', null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICE, default='pending')
+    due_date = models.DateTimeField(null=True, blank=True)
     
     def __str__(self):
         return f"Hoá đơn {self.id} - {self.user.username}"
@@ -87,26 +105,43 @@ class Locker(BaseModel):
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='lockers')
     item_description = models.CharField(max_length=255, null=True, blank=True)
+    tracking_code = models.CharField(max_length=20, unique=True, null=True, blank=True)
     status = models.CharField(max_length=10, choices = STATUS_CHOICE, default='pending')
     received_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return f"Đồ {self.item_description or 'Không có mô tả'} - {self.user.username}"
+        return f"Đồ: {self.item_description or 'Không có mô tả'} - {self.user.username}"
     
     
 class Feedback(BaseModel):
+    STATUS_CHOICE = (
+        ('pending', 'Chờ phản hồi'),
+        ('in_progress', 'Đang xử lý'),
+        ('resolved', 'Đã giải quyết'),
+    )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='feedbacks', null=True, blank=True)
-    content = models.TextField()
+    content = RichTextField()
+    image = models.ImageField(upload_to='feedback/%Y/%m/', null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICE, default='pending')
+    response = models.TextField(null=True, blank=True)
     
     def __str__(self):
         return f"Phản hồi từ {self.user.username if self.user else 'Anonymous'}"
     
 
 class Survey(BaseModel):
+    SURVEY_CHOICE = (
+        ('Hygiene_issues', 'Vệ sinh'),
+        ('Facilities ', 'Cơ sở vật chất'),
+        ('Service','Dịch vụ'),
+    )
     title = models.CharField(max_length=100)
-    description = models.TextField()
+    choice = models.CharField(max_length=50, choices=SURVEY_CHOICE, default='Service')
+    description = RichTextField()
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='surveys')
-    
+    start_date = models.DateTimeField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
+        
     def __str__(self):
         return self.title
     
@@ -114,95 +149,37 @@ class Survey(BaseModel):
 class SurveyResult(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='survey_results')
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name='results')
-    answer = models.JSONField()
+    answer = RichTextField()
     
     def __str__(self):
         return f"Kết quả từ {self.user.username} - {self.survey.title}"
     
+ 
+ 
+class Notification(BaseModel):
+    TYPE_CHOICES = (
+        ('locker', 'Tủ đồ'),
+        ('bill', 'Hóa đơn'),
+        ('feedback', 'Phản hồi'),
+        ('survey', 'Khảo sát'),
+        ('system', 'Hệ thống'),
+     )
     
-# class Fee(BaseModel):
-#     FEE_CHOICES = (
-#         ('MANAGEMENT', 'Phí Quản Lý'),
-#         ('PARKING', 'Phí Gửi Xe'),
-#         ('SERVICE', 'Phí Dịch Vụ')
-#     )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    title = models.CharField(max_length=100)
+    content = models.TextField()
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='system')
+    is_read = models.BooleanField(default=False)
     
-#     type = models.CharField(max_length=20, choices=FEE_CHOICES)
-#     amount = models.DecimalField(max_digits=10, decimal_places=2)
-    
-#     def __str__(self):
-#         return self.type
-
-# class Payment(BaseModel):
-#     PAYMENT_STATUS =(
-#         ('PAID', 'Đã thanh toán'),
-#         ('UNPAID', 'Chưa thanh toán'),
-#         ('OVERDUE', 'Quá hạn'),
-#         ('CANCEL', 'Hủy bỏ')
-
-#     )
-    
-#     PAYMENT_METHOD = (
-#         'TRANSFER', 'Chuyển khoản',
-#         'MOMO', 'Momo Pay',
-#         'VNPAY', 'VN Pay'
-#     )
-    
-#     amount = models.DecimalField(max_digits=10, decimal_places=2)
-#     status = models.CharField(max_length=10, choices=PAYMENT_STATUS)
-#     image_conf = models.ImageField(upload_to='pay/%Y/%m/', null=True)
-    
-#     resident = models.ForeignKey(User, on_delete=models.CASCADE)
-#     fee = models.ForeignKey(Fee, on_delete=models.CASCADE)
-    
-    
-# class Locker(BaseModel):
-#     number = models.CharField(max_length=10)
-#     resident = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
-    
-    
-# class Package(BaseModel):
-#     PACKAGE_STATUS = (
-#         ('RECEIVED', 'Đã nhận'),
-#         ('NOT_RECEIVED', 'Chưa nhận')
-#     )
-#     name = models.CharField(max_length=50)
-#     weight = models.FloatField()
-#     status = models.CharField(max_length=20, choices=PACKAGE_STATUS)
-#     locker = models.ForeignKey(Locker, on_delete=models.CASCADE)
+    def __str__(self):
+        return f"Thông báo {self.title} - {self.user.username}"
     
 
-# class Feedback(BaseModel):
-#     title = models.CharField(max_length=100)
-#     content = models.TextField()
-#     is_resolved = models.BooleanField(default=False)
-#     resident = models.ForeignKey(User, on_delete=models.CASCADE)
+class ChatMessage(BaseModel):
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    content = models.TextField()
+    is_read = models.BooleanField(default=False)
     
-#     def __str__(self):
-#         return self.title
-    
-    
-# class Survey(BaseModel):
-#     title = models.CharField(max_length= 100)
-#     content = models.TextField()
-#     start_date = models.DateTimeField()
-#     end_date = models.DateTimeField()
-    
-#     def __str__(self):
-#         return self.title
-    
-    
-# class Question(BaseModel):
-#     content = models.TextField()
-#     survey = models.ForeignKey(Survey, on_delete=models.CASCADE)
-
-
-# class Answer(BaseModel):
-#     content = models.TextField()
-#     question = models.ForeignKey(Question, on_delete=models.CASCADE)
-#     resident = models.ForeignKey(User, on_delete=models.CASCADE)
-    
-
-
-
-
+    def __str__(self):
+        return f"Tin nhắn từ {self.sender.username} đến {self.receiver.username}"
