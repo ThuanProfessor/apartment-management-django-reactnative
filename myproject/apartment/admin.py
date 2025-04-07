@@ -1,7 +1,6 @@
 from string import Template
 from django.contrib import admin
-from apartment.models import ChatMessage, Notification, User, Apartment, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult
-
+from apartment.models import User, Apartment, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult
 from django.utils.safestring import mark_safe
 from django.db.models import Count
 from django.template.response import TemplateResponse
@@ -9,7 +8,6 @@ from django.template.response import TemplateResponse
 from django import forms
 from ckeditor_uploader.widgets import CKEditorUploadingWidget
 from django.urls import path
-
 
 class FeedbackForm(forms.ModelForm):
     content = forms.CharField(widget=CKEditorUploadingWidget)
@@ -47,7 +45,6 @@ class BillAdmin(admin.ModelAdmin):
             'all': ('/static/css/style.css',)  # Thêm file CSS tùy chỉnh
         }
     
-    
 class FeedbackAdmin(admin.ModelAdmin):
     list_display = ['user']
     search_fields = ['user']
@@ -58,7 +55,6 @@ class FeedbackAdmin(admin.ModelAdmin):
         if feedback.image:
             return mark_safe(f"<img src='/static/{feedback.image.name}' width='100' />")
         return "Không có ảnh"
-    
     
 #tạo instance của riêng
 class MyAdminSite(admin.AdminSite):
@@ -71,21 +67,13 @@ class MyAdminSite(admin.AdminSite):
         return [path('apartment-stats/', self.apartment_stats)] + super().get_urls()
     
     def apartment_stats(self, request):
-        # Đếm số lượng căn hộ cho mỗi user
-        stats = User.objects.filter(apartment__isnull=False).annotate(
-            apm_count=Count('apartment')
-        ).values('id', 'username', 'apm_count')
-        
-        # Tổng số căn hộ
-        total_apartments = Apartment.objects.filter(active=True).count()
-        
-        # Thêm thống kê về số căn hộ trống
-        empty_apartments = Apartment.objects.filter(user__isnull=True, active=True).count()
+    # Đếm số lượng căn hộ cho mỗi user
+        stats = User.objects.annotate(apm_count=Count('apartment__id')).values('id', 'username', 'apm_count')
+        total_apartments = Apartment.objects.count()  # Tổng số căn hộ
         
         return TemplateResponse(request, 'admin/apartment-stats.html', {
             'stats': stats,
-            'total_apartments': total_apartments,
-            'empty_apartments': empty_apartments
+            'total_apartments': total_apartments  # Thêm tổng số
         })
         
         
@@ -97,11 +85,7 @@ class MyAdminSite(admin.AdminSite):
     
     
 admin_site = MyAdminSite(name='ApartmentManagement')
-   
-   
-#inline admin
-class TagInlineAdmin(admin.StackedInline):
-    pass
+    
     
 
 admin_site.register(User)
@@ -113,5 +97,3 @@ admin_site.register(Locker)
 admin_site.register(Feedback, FeedbackAdmin)
 admin_site.register(Survey)
 admin_site.register(SurveyResult)
-admin_site.register(ChatMessage)
-admin_site.register(Notification)
