@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 
+import oauth2_provider
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 #Tạo thư mục media để lưu file ảnh
@@ -42,6 +44,9 @@ INSTALLED_APPS = [
     'apartment.apps.ApartmentConfig',
     'ckeditor',
     'ckeditor_uploader',
+    'rest_framework',
+    'drf_yasg',
+    'oauth2_provider',
 
 ]
 
@@ -87,6 +92,31 @@ DATABASES = {
         'PASSWORD': 'Admin@123',
         'HOST': 'localhost', #port mặc định của local host
     }
+}
+
+#Setting cho Cloudinary
+import cloudinary
+import cloudinary.uploader
+from cloudinary.utils import cloudinary_url
+
+# Configuration       
+cloudinary.config( 
+    cloud_name = "dg5ts9slf", 
+    api_key = "523315624128241", 
+    api_secret = "kpR83NbacJprFxwz2jCGxt3nb4E", # Click 'View API Keys' above to copy your API secret
+    secure=True
+)
+
+#react native gọi api login bằng json
+OAUTH2_PROVIDER = { 'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.OAuthLibCore' }
+
+CLIENT_ID = 'c81OcWdfTtyKMGtnTdDbbmRrmfjARgFGphcvXQwy'
+CLIENT_SECRET = 'yHyrcPp7LfKC3dI4pfh1A3bopWltJ84gGDRHCDNwsUpnzM2V4hdNB79qoqa5tkNkUPnSTBw4Br1zRFqs3l2LaUdwTQp4tzaDa00l4BUNrJXdlQHXjRBfjYZjioKBxKMX'
+    
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+    'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+    )
 }
 
 #Chứng thực user

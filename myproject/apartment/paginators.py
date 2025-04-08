@@ -3,6 +3,8 @@ from rest_framework.pagination import PageNumberPagination, LimitOffsetPaginatio
 
 
 class ItemPagination(PageNumberPagination):
-    page_size = 2
+    page_size = 10
+    page_size_quey_param = 'page_size'
+    max_page_size = 100
     
     

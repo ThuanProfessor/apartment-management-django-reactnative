@@ -28,6 +28,12 @@ class ApartmentAdmin(admin.ModelAdmin):
         }
 
 
+class UserAdmin(admin.ModelAdmin):
+    list_display = ['id', 'username', 'role', 'phone', 'apartment', 'is_first_login', 'active']
+    search_fields = ['username', 'role', 'phone', 'apartment']
+    list_filter = ['role', 'apartment', 'active']
+
+
 class BillAdmin(admin.ModelAdmin):
     list_display = ['user', 'amount', 'payment_method', 'status']
     search_fields = ['user', 'amount', 'payment_method', 'status']
@@ -45,8 +51,20 @@ class BillAdmin(admin.ModelAdmin):
             'all': ('/static/css/style.css',)  # Thêm file CSS tùy chỉnh
         }
     
+    
+class ParkingCardAdmin(admin.ModelAdmin):
+    list_display = ['user', 'relative_name', 'card_code', 'active']
+    search_fields = ['user', 'relative_name', 'card_code']
+    list_filter = ['user', 'active']
+    
+    class Media:
+        css = {
+            'all': ('/static/css/style.css',)
+        }
+    
+    
 class FeedbackAdmin(admin.ModelAdmin):
-    list_display = ['user']
+    list_display = ['user', 'status']
     search_fields = ['user']
     readonly_fields = ['image_view_feedback']
     form = FeedbackForm
@@ -55,7 +73,32 @@ class FeedbackAdmin(admin.ModelAdmin):
         if feedback.image:
             return mark_safe(f"<img src='/static/{feedback.image.name}' width='100' />")
         return "Không có ảnh"
+
+
+
+class LockerAdmin(admin.ModelAdmin):
+    list_display = ['user', 'item_description', 'tracking_code', 'status', 'received_at']
+    search_fields = ['user', 'item_description', 'tracking_code', 'status']
+    list_filter = ['user', 'status']
+    readonly_fields = ['image_view_locker']
     
+    def image_view_locker(self, locker):
+        if locker.tracking_code:
+            return mark_safe(f"<img src='/static/{locker.tracking_code.name}' width='100' />")
+        return "Không có ảnh"
+
+
+class SurveyAdmin(admin.ModelAdmin):
+    list_display = ['id', 'title', 'created_date', 'updated_date', 'created_by']
+    search_fields = ['title', 'created_by']
+    list_filter = ['created_by']
+    
+    def image_view_survey(self, survey):
+        if survey.image:
+            return mark_safe(f"<img src='/static/{survey.image.name}' width='100' />")
+        return "Không có ảnh"
+
+
 #tạo instance của riêng
 class MyAdminSite(admin.AdminSite):
     site_header = 'Apartment Management'
@@ -88,12 +131,12 @@ admin_site = MyAdminSite(name='ApartmentManagement')
     
     
 
-admin_site.register(User)
+admin_site.register(User, UserAdmin)
 admin_site.register(Apartment, ApartmentAdmin)
 admin_site.register(RelativeCard)
 admin_site.register(Bill, BillAdmin)
 admin_site.register(ParkingCard)
-admin_site.register(Locker)
+admin_site.register(Locker, LockerAdmin)
 admin_site.register(Feedback, FeedbackAdmin)
-admin_site.register(Survey)
+admin_site.register(Survey, SurveyAdmin)
 admin_site.register(SurveyResult)
