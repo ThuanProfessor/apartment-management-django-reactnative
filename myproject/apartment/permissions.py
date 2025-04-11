@@ -1,8 +1,8 @@
-import re
+
 from rest_framework import permissions
 
 class IsAdminOrSelf(permissions.BasePermission):
-    
+
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
@@ -22,17 +22,14 @@ class IsAdminOrSelf(permissions.BasePermission):
         
         if hasattr(obj, 'resident'):
             return obj.resident == request.user
-        
+        if hasattr(obj, 'sender'):
+            return obj.sender == request.user or obj.receiver == request.user
         return False
-    
 
-class IsAdmin(permissions.BasePermission):
-    
+class IsAdminOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'ADMIN'
-    
 
-class IsResident(permissions.BasePermission):
-    
+class IsResidentOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'RESIDENT'

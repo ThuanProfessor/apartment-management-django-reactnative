@@ -116,6 +116,7 @@ CLIENT_SECRET = 'yHyrcPp7LfKC3dI4pfh1A3bopWltJ84gGDRHCDNwsUpnzM2V4hdNB79qoqa5tkN
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
     'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+    'rest_framework.authentication.BasicAuthentication',
     )
 }
 

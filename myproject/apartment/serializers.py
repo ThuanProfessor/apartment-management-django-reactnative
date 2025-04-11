@@ -1,6 +1,8 @@
-
+from rest_framework import serializers
+from apartment.models import ChatMessage, User, Apartment, PaymentAccount, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult
 from dataclasses import fields
 from re import S, U
+import cloudinary
 from rest_framework.serializers import ModelSerializer
 from apartment.models import ChatMessage, Notification, PaymentAccount, User, Apartment, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult
 
@@ -9,25 +11,51 @@ from rest_framework import serializers
 class ApartmentSerializer(ModelSerializer):
     class Meta:
         model = Apartment
-        fields =  ['id', 'number', 'floor', 'active']
+        fields =  '__all__'
 
 
-class ItemSerializer(ModelSerializer):
+class ItemSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):        
         data = super().to_representation(instance)
-        if instance.image and instance.image.startswith('image/upload/'):
-            data['image'] = instance.image.url
+        
+        if hasattr(instance, 'image') and instance.image:
+            try:
+                data['image'] = instance.image.url
+            except AttributeError:
+                data['image'] = str(instance.image)
+        
+        if hasattr(instance, 'payment_proof') and instance.payment_proof:
+            try:
+                data['payment_proof'] = instance.payment_proof.url
+                
+            except AttributeError:
+                data['payment_proof'] = str(instance.payment_proof)
+                
+        if hasattr(instance, 'avatar') and instance.avatar:
+            try:
+                data['avatar'] = instance.avatar.url
+            except AttributeError:
+                data['avatar'] = str(instance.avatar)
+        
         return data
+        
+        # cloudinary_fields = ['image', 'payment_proof', 'avatar']
+        
+        # for field in cloudinary_fields:
+        #     if hasattr(instance, field) and getattr(instance, field):
+        #         try:
+        #             data[field] = getattr(instance, field).url
+        #         except AttributeError:
+        #             data[field] = str(getattr(instance, field))
+
 
 class UserSerializer(ItemSerializer):
     apartment_number = serializers.CharField(source='apartment.number', read_only=True)
     class Meta:
         model = User
         fields = ['id', 'username', 'role', 'phone', 'avatar', 'apartment', 'apartment_number', 'active', 'is_first_login']
-    
-    extra_kwargs = {
-        'password': {'write_only': True}
-    }
+        extra_kwargs = {'password': {'write_only': True}}
+  
     
     def to_representation(self, instance):        
         data = super().to_representation(instance)
@@ -43,6 +71,12 @@ class UserSerializer(ItemSerializer):
         
         return u
     
+    def update(self, instance, validated_date):
+        if 'password' in validated_date:
+            instance.set_password(validated_date.pop('password'))
+        
+        return super().update(instance, validated_date)
+    
     
 class BillSerializer(ItemSerializer):
     apartment_number = serializers.CharField(source='apartment.number', read_only=True)
@@ -53,7 +87,7 @@ class BillSerializer(ItemSerializer):
                  'payment_method', 'payment_proof', 'payment_transaction_id', 'status', 'due_date', 'created_date']
         
 
-class PackingCardSerializers(ModelSerializer):
+class ParkingCardSerializer(ModelSerializer):
     apartment_number = serializers.CharField(source='user.apartment.number', read_only=True)
     user_name = serializers.CharField(source = 'user.username', read_only=True)
     class Meta:
@@ -133,7 +167,8 @@ class PaymentAccountSerializer(serializers.ModelSerializer):
         fields = ['id', 'account_type', 'account_number', 'account_name', 'descripttion', 'active']
 
 
-class UserDetailSerializer(UserSerializer):
-    class Meta:
-        model = UserSerializer.Meta.model
-        fields = UserSerializer.Meta.fields + ['apartment', 'role', 'active', 'is_first_login']
+# class UserDetailSerializer(UserSerializer):
+#     class Meta:
+#         model = UserSerializer.Meta.model
+#         fields = UserSerializer.Meta.fields + ['apartment', 'role', 'active', 'is_first_login']
+        
