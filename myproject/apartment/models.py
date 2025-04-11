@@ -2,7 +2,7 @@ from urllib import response
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from ckeditor.fields import RichTextField
-
+from cloudinary.models import CloudinaryField
 
 class BaseModel(models.Model): 
     active = models.BooleanField(default=True, verbose_name="Trạng thái hoạt động")
@@ -24,7 +24,7 @@ class User(AbstractUser, BaseModel):
     )
     
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='RESIDENT')
-    avatar = models.ImageField(upload_to='avatars/%Y/%m/', null=True, blank=True)
+    avatar = CloudinaryField('avatar', null=True, blank=True)
     phone = models.CharField(max_length=15, null=True, blank=True)
     apartment = models.OneToOneField('Apartment', on_delete=models.SET_NULL, null=True, blank=True)
     is_first_login = models.BooleanField(default=True, verbose_name="Lần đầu đăng nhập")
@@ -80,7 +80,8 @@ class Bill(BaseModel):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.CharField(max_length=255, null=True)
     payment_method = models.CharField(max_length=50, choices=PAYMENT_METHOD_CHOICE)
-    payment_proof = models.ImageField(upload_to='pay/%Y/%m/', null=True, blank=True)
+    payment_proof = CloudinaryField('payment_proof', null=True, blank=True)
+    payment_transaction_id = models.CharField(max_length=50, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICE, default='pending')
     due_date = models.DateTimeField(null=True, blank=True)
     
@@ -121,7 +122,7 @@ class Feedback(BaseModel):
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='feedbacks', null=True, blank=True)
     content = RichTextField()
-    image = models.ImageField(upload_to='feedback/%Y/%m/', null=True, blank=True)
+    image = CloudinaryField('image', null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICE, default='pending')
     response = models.TextField(null=True, blank=True)
     
@@ -154,8 +155,7 @@ class SurveyResult(BaseModel):
     def __str__(self):
         return f"Kết quả từ {self.user.username} - {self.survey.title}"
     
- 
- 
+
 class Notification(BaseModel):
     TYPE_CHOICES = (
         ('locker', 'Tủ đồ'),
@@ -174,12 +174,29 @@ class Notification(BaseModel):
     def __str__(self):
         return f"Thông báo {self.title} - {self.user.username}"
     
+    
+#tài khoản này nhận thanh toán chuyển khoản
+class PaymentAccount(BaseModel):
+    ACCOUNT_TYPE_CHOICES = (
+        ('Momo', 'Momo'),
+        ('Bank', 'Ngân hàng'),
+    )
+    
+    account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPE_CHOICES, default='Bank')
+    account_number = models.CharField(max_length=20, unique=True)
+    account_name = models.CharField(max_length=50)
+    descripttion = models.TextField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.account_type} - {self.account_number} - {self.account_name}"
+        
 
 class ChatMessage(BaseModel):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
     content = models.TextField()
     is_read = models.BooleanField(default=False)
+    firebase_massage_id = models.CharField(max_length=255, null=True, blank=True)
     
     def __str__(self):
         return f"Tin nhắn từ {self.sender.username} đến {self.receiver.username}"
