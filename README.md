@@ -1,11 +1,11 @@
 
-# Apartment Managements
+# **Apartment Managements**
 
 Dự án quản lý chung cư bao gồm nhiều nghiệp vụ quan trọng, sử dụng Django Restful để cấu hình API và sử dụng React Native để xây dựng giao diện Mobile App, truy xuất dữ liệu bằng cách gọi các API đã được triển khai lên PythonAnyWhere.
     
 
 
-## Các nghiệp vụ quan trọng
+## ✅Các nghiệp vụ quan trọng
 - Quản lý cư dân
 - Quản lý căn hộ
 - Quản lý hoá đơn
@@ -19,15 +19,15 @@ Dự án quản lý chung cư bao gồm nhiều nghiệp vụ quan trọng, sử
 
 
 
-## Installation
+## 🛠️Installation
 
-- Đầu tiên, bạn cần clone project về máy local thông qua HTTPS hoặc SSH :
+- Đầu tiên, bạn cần clone project về máy local thông qua **🔗HTTPS** hoặc **🔗SSH** :
 
-HTTPS:
+🔗HTTPS:
 ```bash
   https://github.com/ThuanProfessor/apartment-management-django-reactnative.git
 ```
-SSH:
+🔗SSH:
 ```bash
   git@github.com:ThuanProfessor/apartment-management-django-reactnative.git
 ```
@@ -38,7 +38,7 @@ python -m venv thuanvenv
 ```
 - Kích hoạt môi trường ảo:
 ```bash
-thuanvenv/Scripts\activate
+thuanvenv\Scripts\activate
 ```
 - Cài đặt các thư viện quan trọng trong file requirements.txt:
 ```bash
@@ -47,9 +47,101 @@ pip install -r requirements.txt
 
 
 
-## Support
+## 🌐 API Reference
+
+#### 🔐Authentication
+Đăng nhập
+![POST](https://img.shields.io/badge/-POST-brightgreen)
+```http
+  POST /api/auth/login/
+```
+Đăng xuất
+![GET](https://img.shields.io/badge/-GET-blue)
+```http
+  POST /api/auth/logout/
+```
+
+
+Lấy thông tin user hiện tại
+![GET](https://img.shields.io/badge/-GET-blue)
+```http
+  GET /api/auth/showprofile/
+```
+#### 👤User
+Get list user
+![GET](https://img.shields.io/badge/-GET-blue)
+```http
+  GET /api/users/
+```
+Get current-user
+![GET](https://img.shields.io/badge/-GET-blue)
+```http
+  GET /api/users/current-user/
+```
+Change-pass
+![POST](https://img.shields.io/badge/-POST-brightgreen)
+```http
+  POST /api/users/change_pass/
+```
+complete_setup
+![POST](https://img.shields.io/badge/-POST-brightgreen)
+```http
+  POST /api/users/complete_setup/
+```
+assign_apartment
+![PATCH](https://img.shields.io/badge/-PATCH-lightblue)
+```http
+  PATCH /api/users/{id}/assign_apartment/
+```
+#### 🏢Apartments
+Get list Apartments![GET](https://img.shields.io/badge/-GET-blue)
+```http
+  GET /api/apartments/
+```
+Create Apartment
+![POST](https://img.shields.io/badge/-POST-brightgreen)
+```http
+  POST /api/apartments/
+```
+Update info aparment
+![PATCH](https://img.shields.io/badge/-PATCH-lightblue)
+```http
+  PATCH /api/apartments/{id}/
+```
+Delete info apartment
+![DELETE](https://img.shields.io/badge/-DELETE-red)
+```http
+  DELETE /api/apartments/{id}/
+```
+Summary
+![GET](https://img.shields.io/badge/-GET-blue)
+```http
+  GET /api/apartments/{id}/summary/
+```
+Get list residents in apartments
+![GET](https://img.shields.io/badge/-GET-blue)
+```http
+  GET /api/apartments/{id}/residents/
+```
+
+
+
+
+
+## ✉️Support
 
 Mọi thắt mắc xin vui lòng liên hệ mình thông qua email: beanheo2014@gmail.com
+
+
+## 🔍Tech Stack
+
+**Backend:** Django REST Framework (DRF)
+
+**Mobile Frontend:** React Native
+
+**Authentication:** Oauth2, Token-based Authentication
+
+**Database:** MySQL
 
 
 ## Badges
