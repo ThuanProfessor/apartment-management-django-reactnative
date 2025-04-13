@@ -33,3 +33,12 @@ class IsAdminOnly(permissions.BasePermission):
 class IsResidentOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == 'RESIDENT'
+    
+
+class IsPasswordChanged(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.user.is_authenticated and request.user.is_first_login and request.user.role == 'RESIDENT':
+            allowed_actions = ['change_password', 'logout', 'showprofile', 'get_current_user']
+            if view.action not in allowed_actions:
+                return False
+        return True

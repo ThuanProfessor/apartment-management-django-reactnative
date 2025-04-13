@@ -56,6 +56,8 @@ class UserSerializer(ItemSerializer):
         fields = ['id', 'username', 'role', 'phone', 'avatar', 'apartment', 'apartment_number', 'active', 'is_first_login']
         extra_kwargs = {'password': {'write_only': True}}
   
+    def get_has_completed_setup(self, obj):
+        return not obj.is_first_login and bool(obj.avatar)
     
     def to_representation(self, instance):        
         data = super().to_representation(instance)

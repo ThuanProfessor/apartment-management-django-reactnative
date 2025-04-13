@@ -33,7 +33,7 @@ router.register(r'users/(?P<user_id>\d+)/notifications', views.NotificationViewS
 
 #apartment-nested
 router.register(r'apartments/(?P<apartment_id>\d+)/residents', views.UserViewSet, basename='apartment-residents')
-router.register(r'apartments/(?P<apartment_id>\d+)/bills', views.BillViewSet, basename='apartment-bills')
+# router.register(r'apartments/(?P<apartment_id>\d+)/bills', views.BillViewSet, basename='apartment-bills')
 
 #survey-nested
 router.register(r'surveys/(?P<survey_id>\d+)/results', views.SurveyResultViewSet, basename='survey-results')

@@ -4,18 +4,13 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Q
+from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 import cloudinary.uploader
 from apartment.models import Apartment, User, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult, PaymentAccount, Notification, ChatMessage, Payment
 from apartment import serializers, paginators
-from apartment.permissions import IsAdminOrSelf, IsAdminOnly, IsResidentOnly
-from django_filters.rest_framework import DjangoFilterBackend, SearchFilter, OrderingFilter
-import hashlib
-import hmac
-import json
-import requests
-from datetime import datetime
-from apartment.payment.momo_config import MOMO_CONFIG
+from apartment.permissions import IsAdminOrSelf, IsAdminOnly, IsPasswordChanged, IsResidentOnly
+
 
 class AuthViewSet(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
@@ -28,12 +23,13 @@ class AuthViewSet(viewsets.ViewSet):
         user = authenticate(request, username=username, password=password)
         
         if user:
+            if not user.active:
+                return Response({'error': 'Tài khoản đã bị khóa'}, status=status.HTTP_400_BAD_REQUEST)
             login(request, user)
             serializer = serializers.UserSerializer(user)
-
             return Response({'user': serializer.data}, status=status.HTTP_200_OK)
         
-        return Response({'error': 'Thông tin không hợp lệ'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Tên đăng nhập hoặc mật khẩu không đúng'}, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def logout(self, request):
@@ -50,8 +46,6 @@ class ApartmentViewSet(viewsets.ModelViewSet):
     queryset = Apartment.objects.all()
     serializer_class = serializers.ApartmentSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_class = ApartmentFilter
     search_fields = ['number', 'floor', 'description']
     ordering_fields = ['number', 'floor', 'created_date']
 
@@ -68,19 +62,19 @@ class ApartmentViewSet(viewsets.ModelViewSet):
             return Apartment.objects.filter(id=user.apartment.id)
         return Apartment.objects.none()
 
-    @action(detail=True, methods=['get'])
-    def residents(self, request, pk=None):
-        apartment = self.get_object()
-        residents = User.objects.filter(apartment=apartment, role='RESIDENT')
-        serializer = serializers.UserSerializer(residents, many=True)
-        return Response(serializer.data)
+    # @action(detail=True, methods=['get'])
+    # def residents(self, request, pk=None):
+    #     apartment = self.get_object()
+    #     residents = User.objects.filter(apartment=apartment, role='RESIDENT')
+    #     serializer = serializers.UserSerializer(residents, many=True)
+    #     return Response(serializer.data)
 
-    @action(detail=True, methods=['get'])
-    def bills(self, request, pk=None):
-        apartment = self.get_object()
-        bills = Bill.objects.filter(apartment=apartment)
-        serializer = serializers.BillSerializer(bills, many=True)
-        return Response(serializer.data)
+    # @action(detail=True, methods=['get'])
+    # def bills(self, request, pk=None):
+    #     apartment = self.get_object()
+    #     bills = Bill.objects.filter(apartment=apartment)
+    #     serializer = serializers.BillSerializer(bills, many=True)
+    #     return Response(serializer.data)
 
     @action(detail=True, methods=['get'])
     def summary(self, request, pk=None):
@@ -119,7 +113,7 @@ class ApartmentViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.filter(active=True)
     serializer_class = serializers.UserSerializer
-    permission_classes = [IsAdminOrSelf]
+    permission_classes = [IsAdminOrSelf, IsPasswordChanged]
     pagination_class = paginators.ItemPagination
     parser_classes = [MultiPartParser, FormParser]
     
@@ -146,7 +140,10 @@ class UserViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         if self.request.user.role != 'ADMIN':
             raise permissions.PermissionDenied("Chỉ admin mới có thể tạo người dùng.")
-        serializer.save()
+        user = serializer.save()
+        
+        if user.role == 'RESIDENT':
+            user.is_first_login = True
 
     def perform_update(self, serializer):
         if self.request.user.role != 'ADMIN' and self.get_object().id != self.request.user.id:
@@ -178,99 +175,76 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializers.UserSerializer(request.user).data)
         
 
-    @action(detail=True, methods=['get'])
-    def bills(self, request, pk=None):
-        user = self.get_object()
-        bills = Bill.objects.filter(user=user, active=True)
-        status_param = request.query_params.get('status')
-        if status_param:
-            bills = bills.filter(status=status_param)
-        page = self.paginate_queryset(bills)
-        if page is not None:
-            serializer = serializers.BillSerializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        serializer = serializers.BillSerializer(bills, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class BillViewSet(viewsets.ModelViewSet):
-    queryset = Bill.objects.filter(active=True)
-    serializer_class = serializers.BillSerializer
-    permission_classes = [IsAdminOrSelf]
-    pagination_class = paginators.ItemPagination
-    parser_classes = [MultiPartParser, FormParser]
+    # @action(detail=True, methods=['get'])
+    # def bills(self, request, pk=None):
+    #     user = self.get_object()
+    #     bills = Bill.objects.filter(user=user, active=True)
+    #     status_param = request.query_params.get('status')
+    #     if status_param:
+    #         bills = bills.filter(status=status_param)
+    #     page = self.paginate_queryset(bills)
+    #     if page is not None:
+    #         serializer = serializers.BillSerializer(page, many=True)
+    #         return self.get_paginated_response(serializer.data)
+    #     serializer = serializers.BillSerializer(bills, many=True)
+    #     return Response(serializer.data, status=status.HTTP_200_OK)
     
-    def get_queryset(self):
-        query = self.queryset
-        user_id = self.kwargs.get('user_id')
-        apartment_id = self.kwargs.get('apartment_id')
-        if user_id:
-            query = query.filter(user_id=user_id)
-        elif apartment_id:
-            query = query.filter(user__apartment_id=apartment_id)
-        else:
-            query = query.filter(user_id=self.request.user.id)  # Mặc định cho user hiện tại
-        q = self.request.query_params.get('q')
-        if q:
-            query = query.filter(description__icontains=q)
-        status_param = self.request.query_params.get('status')
-        if status_param:
-            query = query.filter(status=status_param)
-        bill_type = self.request.query_params.get('bill_type')
-        if bill_type:
-            query = query.filter(bill_type=bill_type)
-        return query.order_by('-due_date')
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def change_pass(self, request):
+        user = request.user
+        old_pass = request.data.get('old_password')
+        new_pass = request.data.get('new_password')
+        
+        if not user.check_password(old_pass):
+            return Response({'error': 'Mật khẩu cũ không đúng'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not new_pass or len(new_pass) < 8:
+            return Response(
+                {'error': 'Mật khẩu mới phải dài ít nhất 8 ký tự'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        user.password = make_password(new_pass)
+        user.is_first_login = False
+        user.save()
+
+        return Response(
+            {'message': 'Đổi mật khẩu thành công'},
+            status=status.HTTP_200_OK
+        )
+
     
-    def perform_create(self, serializer):
-        if self.request.user.role != 'ADMIN':
-            raise permissions.PermissionDenied('Chỉ admin mới có thể tạo người dùng')
-        
-        serializer.save()
-        
     def perform_update(self, serializer):
-        if self.request.user.role != 'ADMIN' and self.get_object().id != self.request.user.id:
-            raise permissions.PermissionDenied("Bạn chỉ có thể cập nhật thông tin của chính mình.")
+        if self.request.user.role == 'RESIDENT' and self.request.user.is_first_login:
+            if not self.request.FILES.get('avatar'):
+                raise permissions.PermissionDenied("Cư dân phải upload avatar để hoàn tất thiết lập tài khoản.")
         avatar_file = self.request.FILES.get('avatar')
         if avatar_file:
             upload_result = cloudinary.uploader.upload(avatar_file, folder='avatars/')
             serializer.save(avatar=upload_result['public_id'])
         else:
             serializer.save()
+            
+    #phải điền đủ form mới cho nhận nhà nhé bro
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def complete_setup(self, request):
+        user = request.user
+        if user.role != 'RESIDENT':
+            raise permissions.PermissionDenied("Chỉ cư dân mới có thể thực hiện hành động này.")
+        if user.is_first_login:
+            raise permissions.PermissionDenied("Vui lòng đổi mật khẩu và upload avatar trước.")
+        if not user.avatar:
+            raise permissions.PermissionDenied("Vui lòng upload avatar.")
+        user.is_first_login = False
+        user.save()
+        return Response({'message': 'Thiết lập tài khoản hoàn tất.'}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['patch'], permission_classes=[IsAdminOnly])
-    def assign_apartment(self, request, pk=None):
-        user = self.get_object()
-        apartment_id = request.data.get('apartment_id')
-        if not apartment_id:
-            return Response({'error': 'Vui lòng cung cấp apartment_id'}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            apartment = Apartment.objects.get(id=apartment_id)
-            user.apartment = apartment
-            user.save()
-            serializer = self.get_serializer(user)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except Apartment.DoesNotExist:
-            return Response({'error': 'Căn hộ không tồn tại'}, status=status.HTTP_404_NOT_FOUND)
-
-    @action(detail=True, methods=['get'])
-    def bills(self, request, pk=None):
-        user = self.get_object()
-        bills = Bill.objects.filter(user=user, active=True)
-        status_param = request.query_params.get('status')
-        if status_param:
-            bills = bills.filter(status=status_param)
-        page = self.paginate_queryset(bills)
-        if page is not None:
-            serializer = serializers.BillSerializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        serializer = serializers.BillSerializer(bills, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
 # Bill ViewSet
 class BillViewSet(viewsets.ModelViewSet):
     queryset = Bill.objects.filter(active=True)
     serializer_class = serializers.BillSerializer
-    permission_classes = [IsAdminOrSelf]
+    permission_classes = [IsAdminOrSelf, IsPasswordChanged]
     pagination_class = paginators.ItemPagination
     parser_classes = [MultiPartParser, FormParser]
 
@@ -297,6 +271,8 @@ class BillViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'])
     def upload_proof(self, request, pk=None):
         bill = self.get_object()
+        if bill.status != 'pending':
+            raise permissions.PermissionDenied("Hóa đơn không ở trạng thái chờ thanh toán.")
         if bill.user != request.user and request.user.role != 'ADMIN':
             raise permissions.PermissionDenied("Bạn không có quyền cập nhật hóa đơn này.")
         payment_proof = request.FILES.get('payment_proof')
@@ -306,6 +282,17 @@ class BillViewSet(viewsets.ModelViewSet):
         bill.payment_transaction_id = request.data.get('payment_transaction_id')
         bill.status = 'pending'
         bill.save()
+        
+        # Tạo Payment
+        Payment.objects.create(
+            user=bill.user,
+            bill=bill,
+            amount=bill.amount,
+            payment_method='MOMO' if bill.payment_method == 'momo_transfer' else 'BANK',
+            status='PENDING',
+            transaction_id=bill.payment_transaction_id
+        )
+        
         serializer = self.get_serializer(bill)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -387,7 +374,7 @@ class RelativeCardViewSet(viewsets.ModelViewSet):
 class LockerViewSet(viewsets.ModelViewSet):
     queryset = Locker.objects.filter(active=True)
     serializer_class = serializers.LockerSerializer
-    permission_classes = [IsAdminOrSelf]
+    permission_classes = [IsAdminOrSelf, IsPasswordChanged]
     pagination_class = paginators.ItemPagination
 
     def get_queryset(self):
@@ -419,7 +406,7 @@ class LockerViewSet(viewsets.ModelViewSet):
 class FeedbackViewSet(viewsets.ModelViewSet):
     queryset = Feedback.objects.filter(active=True)
     serializer_class = serializers.FeedbackSerializer
-    permission_classes = [IsAdminOrSelf]
+    permission_classes = [IsAdminOrSelf, IsPasswordChanged]
     pagination_class = paginators.ItemPagination
     parser_classes = [MultiPartParser, FormParser]
 
@@ -601,154 +588,9 @@ class PaymentAccountViewSet(viewsets.ModelViewSet):
         if self.request.user.role != 'ADMIN':
             raise permissions.PermissionDenied("Chỉ admin mới có thể cập nhật tài khoản thanh toán.")
         serializer.save()
-
-class PaymentViewSet(viewsets.ModelViewSet):
-    queryset = Payment.objects.all()
-    serializer_class = serializers.PaymentSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        if user.role == 'ADMIN':
-            return Payment.objects.all()
-        return Payment.objects.filter(user=user)
-
-    @action(detail=False, methods=['post'])
-    def create_momo_payment(self, request):
-        try:
-            # Lấy thông tin từ request
-            bill_id = request.data.get('bill_id')
-            amount = request.data.get('amount')
-            user = request.user
-
-            # Kiểm tra bill
-            try:
-                bill = Bill.objects.get(id=bill_id)
-            except Bill.DoesNotExist:
-                return Response({
-                    'status': 'error',
-                    'message': 'Bill not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-
-            # Tạo order_id
-            order_id = f"BILL_{bill_id}_{int(datetime.now().timestamp())}"
-
-            # Tạo request data
-            request_data = {
-                'partnerCode': MOMO_CONFIG['PARTNER_CODE'],
-                'partnerName': "Apartment Management",
-                'storeId': "Apartment Management",
-                'requestId': order_id,
-                'amount': str(amount),
-                'orderId': order_id,
-                'orderInfo': f"Thanh toán hóa đơn {bill_id}",
-                'redirectUrl': MOMO_CONFIG['RETURN_URL'],
-                'ipnUrl': MOMO_CONFIG['NOTIFY_URL'],
-                'lang': 'vi',
-                'extraData': '',
-                'requestType': MOMO_CONFIG['REQUEST_TYPE'],
-                'items': [],
-                'userInfo': {
-                    'name': user.get_full_name(),
-                    'phoneNumber': user.phone,
-                    'email': user.email
-                }
-            }
-
-            # Tạo signature
-            raw_signature = f"accessKey={MOMO_CONFIG['ACCESS_KEY']}&amount={amount}&extraData=&ipnUrl={MOMO_CONFIG['NOTIFY_URL']}&orderId={order_id}&orderInfo=Thanh toán hóa đơn {bill_id}&partnerCode={MOMO_CONFIG['PARTNER_CODE']}&redirectUrl={MOMO_CONFIG['RETURN_URL']}&requestId={order_id}&requestType={MOMO_CONFIG['REQUEST_TYPE']}"
-            signature = hmac.new(
-                MOMO_CONFIG['SECRET_KEY'].encode(),
-                raw_signature.encode(),
-                hashlib.sha256
-            ).hexdigest()
-
-            request_data['signature'] = signature
-
-            # Gọi API Momo
-            response = requests.post(
-                MOMO_CONFIG['API_ENDPOINT'],
-                json=request_data,
-                headers={'Content-Type': 'application/json'}
-            )
-
-            if response.status_code == 200:
-                result = response.json()
-                if result.get('resultCode') == 0:
-                    # Lưu thông tin thanh toán vào database
-                    payment = Payment.objects.create(
-                        user=user,
-                        bill=bill,
-                        amount=amount,
-                        payment_method='MOMO',
-                        status='PENDING',
-                        payment_url=result.get('payUrl'),
-                        payment_info=result
-                    )
-                    
-                    return Response({
-                        'status': 'success',
-                        'payment_url': result.get('payUrl'),
-                        'payment_id': payment.id
-                    })
-                else:
-                    return Response({
-                        'status': 'error',
-                        'message': result.get('message')
-                    }, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                return Response({
-                    'status': 'error',
-                    'message': 'Payment gateway error'
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        except Exception as e:
-            return Response({
-                'status': 'error',
-                'message': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    @action(detail=False, methods=['post'])
-    def momo_ipn(self, request):
-        # Xử lý IPN (Instant Payment Notification) từ Momo
-        try:
-            data = request.data
-            order_id = data.get('orderId')
-            result_code = data.get('resultCode')
-            trans_id = data.get('transId')
-            
-            # Lấy payment từ order_id
-            payment = Payment.objects.get(payment_info__requestId=order_id)
-            
-            if result_code == 0:  # Thanh toán thành công
-                payment.status = 'SUCCESS'
-                payment.transaction_id = trans_id
-                payment.payment_date = datetime.now()
-                payment.payment_info = data
-                payment.save()
-                
-                # Cập nhật trạng thái bill
-                bill = payment.bill
-                bill.status = 'PAID'
-                bill.save()
-                
-                # Tạo notification
-                Notification.objects.create(
-                    user=payment.user,
-                    title='Thanh toán thành công',
-                    content=f'Thanh toán hóa đơn {bill.id} thành công',
-                    type='PAYMENT'
-                )
-                
-            else:  # Thanh toán thất bại
-                payment.status = 'FAILED'
-                payment.payment_info = data
-                payment.save()
-                
-            return Response({'status': 'success'})
-            
-        except Exception as e:
-            return Response({
-                'status': 'error',
-                'message': str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def active_accounts(self, request):
+        accounts = self.queryset.filter(active=True)
+        serializer = self.get_serializer(accounts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
