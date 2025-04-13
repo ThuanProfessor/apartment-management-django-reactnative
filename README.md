@@ -51,75 +51,75 @@ pip install -r requirements.txt
 
 #### 🔐Authentication
 Đăng nhập
-![POST](https://img.shields.io/badge/-POST-brightgreen)
+![POST](https://img.shields.io/badge/-POST-brightgreen)  
 ```http
   POST /api/auth/login/
 ```
 Đăng xuất
-![GET](https://img.shields.io/badge/-GET-blue)
+![GET](https://img.shields.io/badge/-GET-blue)  
 ```http
   POST /api/auth/logout/
 ```
 
 
 Lấy thông tin user hiện tại
-![GET](https://img.shields.io/badge/-GET-blue)
+![GET](https://img.shields.io/badge/-GET-blue)  
 ```http
   GET /api/auth/showprofile/
 ```
 #### 👤User
 Get list user
-![GET](https://img.shields.io/badge/-GET-blue)
+![GET](https://img.shields.io/badge/-GET-blue)  
 ```http
   GET /api/users/
 ```
 Get current-user
-![GET](https://img.shields.io/badge/-GET-blue)
-```http
+![GET](https://img.shields.io/badge/-GET-blue)  
+```http 
   GET /api/users/current-user/
 ```
 Change-pass
-![POST](https://img.shields.io/badge/-POST-brightgreen)
+![POST](https://img.shields.io/badge/-POST-brightgreen)  
 ```http
   POST /api/users/change_pass/
 ```
 complete_setup
-![POST](https://img.shields.io/badge/-POST-brightgreen)
+![POST](https://img.shields.io/badge/-POST-brightgreen)  
 ```http
   POST /api/users/complete_setup/
 ```
 assign_apartment
-![PATCH](https://img.shields.io/badge/-PATCH-lightblue)
+![PATCH](https://img.shields.io/badge/-PATCH-lightblue)  
 ```http
   PATCH /api/users/{id}/assign_apartment/
 ```
 #### 🏢Apartments
-Get list Apartments![GET](https://img.shields.io/badge/-GET-blue)
+Get list Apartments![GET](https://img.shields.io/badge/-GET-blue)  
 ```http
   GET /api/apartments/
 ```
 Create Apartment
-![POST](https://img.shields.io/badge/-POST-brightgreen)
+![POST](https://img.shields.io/badge/-POST-brightgreen)  
 ```http
   POST /api/apartments/
 ```
 Update info aparment
-![PATCH](https://img.shields.io/badge/-PATCH-lightblue)
+![PATCH](https://img.shields.io/badge/-PATCH-lightblue)  
 ```http
   PATCH /api/apartments/{id}/
 ```
 Delete info apartment
-![DELETE](https://img.shields.io/badge/-DELETE-red)
+![DELETE](https://img.shields.io/badge/-DELETE-red)  
 ```http
   DELETE /api/apartments/{id}/
 ```
 Summary
-![GET](https://img.shields.io/badge/-GET-blue)
+![GET](https://img.shields.io/badge/-GET-blue)  
 ```http
   GET /api/apartments/{id}/summary/
 ```
 Get list residents in apartments
-![GET](https://img.shields.io/badge/-GET-blue)
+![GET](https://img.shields.io/badge/-GET-blue)  
 ```http
   GET /api/apartments/{id}/residents/
 ```
