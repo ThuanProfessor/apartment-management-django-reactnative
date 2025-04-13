@@ -47,13 +47,12 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'oauth2_provider',
-    'corsheaders',
+
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -109,41 +108,17 @@ cloudinary.config(
 )
 
 #react native gọi api login bằng json
-OAUTH2_PROVIDER = {
-    'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.OAuthLibCore',
-    'ACCESS_TOKEN_EXPIRE_SECONDS': 3600,  # Token hết hạn sau 1 giờ
-    'REFRESH_TOKEN_EXPIRE_SECONDS': 86400,  # Refresh token hết hạn sau 24 giờ
-    'SCOPES': {
-        'read': 'Read scope',
-        'write': 'Write scope',
-        'groups': 'Access to your groups'
-    },
-    'DEFAULT_SCOPES': ['read', 'write'],
-}
+OAUTH2_PROVIDER = { 'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.OAuthLibCore' }
 
 CLIENT_ID = 'c81OcWdfTtyKMGtnTdDbbmRrmfjARgFGphcvXQwy'
 CLIENT_SECRET = 'yHyrcPp7LfKC3dI4pfh1A3bopWltJ84gGDRHCDNwsUpnzM2V4hdNB79qoqa5tkNkUPnSTBw4Br1zRFqs3l2LaUdwTQp4tzaDa00l4BUNrJXdlQHXjRBfjYZjioKBxKMX'
     
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
-        'rest_framework.authentication.SessionAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
-    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',
-    'DEFAULT_VERSION': 'v1',
-    'ALLOWED_VERSIONS': ['v1'],
-    'VERSION_PARAM': 'version',
+    'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+    'rest_framework.authentication.BasicAuthentication',
+    )
 }
-
-from datetime import timedelta
-
-#Đường dẫn lưu ảnh trên cloudinaryy
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 #Chứng thực user
 
@@ -198,15 +173,5 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-CLIENT_ID = '3ubIpnYSBW7RnMbzKbGuhKhnqZ4ulQVNYs1gKZ7a'
-CLIENT_SECRET = 'AFD1wwS33De9Wp0x3810Ujex8j7ocfMLAEVWN6q7TEcoUsnu8G0tiNZtSCDGYokYZNuWsNifTTsC5qZFs14r7UqnQDpFSjvIntuIl7rEPR5ONf48YKmIjHUXu6x3pzez'
-
-CORS_ALLOW_ALL_ORIGINS = True  # Chỉ dùng trong môi trường development
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:19006",
-    "http://localhost:19000",
-]
-
+CLIENT_ID = 'y9o8EniSoOiWfR8OLZlfEARcdDjst2vFXdQgyzx0'
+CLIENT_SECRET = 'wbtbUzorW0wIZAEYTz35bvCFgqlnLqusIlVTeYpQtBexes2dq4Io7IfG6Bc8h2WzflkTyzW4ASoN07cAOD7LFc1Hx8e5nLVc0VH2RNiLvtWnDwh1SDIGGI4NfjqvjtkQ'
