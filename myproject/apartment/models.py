@@ -200,3 +200,33 @@ class ChatMessage(BaseModel):
     
     def __str__(self):
         return f"Tin nhắn từ {self.sender.username} đến {self.receiver.username}"
+
+class Payment(BaseModel):
+    PAYMENT_METHOD_CHOICES = [
+        ('MOMO', 'Momo'),
+        ('BANK', 'Bank Transfer'),
+        ('CASH', 'Cash'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('SUCCESS', 'Success'),
+        ('FAILED', 'Failed'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments')
+    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='payments')
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    transaction_id = models.CharField(max_length=100, null=True, blank=True)
+    payment_url = models.URLField(null=True, blank=True)
+    payment_info = models.JSONField(null=True, blank=True)
+    payment_date = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_date']
+
+    def __str__(self):
+        return f"Payment {self.id} - {self.amount} - {self.status}"

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apartment.models import ChatMessage, User, Apartment, PaymentAccount, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult
+from apartment.models import ChatMessage, User, Apartment, PaymentAccount, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult, Payment
 from dataclasses import fields
 from re import S, U
 import cloudinary
@@ -165,6 +165,16 @@ class PaymentAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentAccount
         fields = ['id', 'account_type', 'account_number', 'account_name', 'descripttion', 'active']
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = ['id', 'user', 'bill', 'amount', 'payment_method', 
+                 'status', 'transaction_id', 'payment_url', 
+                 'payment_info', 'payment_date', 'created_date']
+        read_only_fields = ['user', 'status', 'transaction_id', 
+                          'payment_url', 'payment_info', 'payment_date']
 
 
 # class UserDetailSerializer(UserSerializer):
