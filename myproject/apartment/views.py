@@ -3,12 +3,19 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.contrib.auth import authenticate, login, logout
+from django.db.models import Q
 from django.utils import timezone
 import cloudinary.uploader
-from apartment.models import Apartment, User, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult, PaymentAccount, Notification, ChatMessage
+from apartment.models import Apartment, User, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult, PaymentAccount, Notification, ChatMessage, Payment
 from apartment import serializers, paginators
-from apartment.permissions import IsAdminOnly, IsAdminOrSelf, IsResidentOnly
-from django.core.exceptions import PermissionDenied
+from apartment.permissions import IsAdminOrSelf, IsAdminOnly, IsResidentOnly
+from django_filters.rest_framework import DjangoFilterBackend, SearchFilter, OrderingFilter
+import hashlib
+import hmac
+import json
+import requests
+from datetime import datetime
+from apartment.payment.momo_config import MOMO_CONFIG
 
 class AuthViewSet(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
@@ -34,45 +41,71 @@ class AuthViewSet(viewsets.ViewSet):
         return Response({'message':'Đăng xuất thành công'}, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
-    def showme(self, request):
+    def showprofile(self, request):
         serializer = serializers.UserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     
 class ApartmentViewSet(viewsets.ModelViewSet):
-    queryset = Apartment.objects.filter(active=True)
+    queryset = Apartment.objects.all()
     serializer_class = serializers.ApartmentSerializer
-    permission_classes = [IsAdminOrSelf]
-    pagination_class = paginators.ItemPagination
-    
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_class = ApartmentFilter
+    search_fields = ['number', 'floor', 'description']
+    ordering_fields = ['number', 'floor', 'created_date']
+
     def get_queryset(self):
-        query = self.queryset
-        
-        if self.request.user.role == 'RESIDENT':
-            query = query.filter(id=self.request.user.apartment.id)
-        q = self.request.query_params.get('q')
-        if q:
-            query = query.filter(number__icontains=q)
+        user = self.request.user
+        if not user.is_authenticated:
+            return Apartment.objects.none()
             
-        floor = self.request.query_params.get('floor')
-        if floor:
-            query = query.filter(floor=floor)
-            
-        status = self.request.query_params.get('status')
-        if status:
-            query = query.filter(status=status)
-        return query.order_by('number')
-    
+        if user.role == 'ADMIN':
+            return Apartment.objects.all()
+        elif user.role == 'RESIDENT':
+            if not hasattr(user, 'apartment') or user.apartment is None:
+                return Apartment.objects.none()
+            return Apartment.objects.filter(id=user.apartment.id)
+        return Apartment.objects.none()
+
+    @action(detail=True, methods=['get'])
+    def residents(self, request, pk=None):
+        apartment = self.get_object()
+        residents = User.objects.filter(apartment=apartment, role='RESIDENT')
+        serializer = serializers.UserSerializer(residents, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def bills(self, request, pk=None):
+        apartment = self.get_object()
+        bills = Bill.objects.filter(apartment=apartment)
+        serializer = serializers.BillSerializer(bills, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def summary(self, request, pk=None):
+        apartment = self.get_object()
+        summary = {
+            'total_residents': User.objects.filter(apartment=apartment, role='RESIDENT').count(),
+            'total_bills': Bill.objects.filter(apartment=apartment).count(),
+            'pending_bills': Bill.objects.filter(apartment=apartment, status='PENDING').count(),
+            'paid_bills': Bill.objects.filter(apartment=apartment, status='PAID').count(),
+            'overdue_bills': Bill.objects.filter(apartment=apartment, status='OVERDUE').count(),
+        }
+        return Response(summary)
     
     def perform_create(self, serializer):
         if self.request.user.role != 'ADMIN':
-            raise PermissionDenied('Chỉ có admin mới có quyền tạo căn hộ mới')
+            raise permissions.PermissionDenied('Chỉ có admin mới có quyền tạo căn hộ mới')
+        
+        serializer.save()
+        
         
         serializer.save()
         
     def perform_update(self, serializer):
         if self.request.user.role != 'ADMIN':
-            raise PermissionDenied("Chỉ admin mới có thể cập nhật căn hộ.")
+            raise permissions.PermissionDenied("Chỉ admin mới có thể cập nhật căn hộ.")
         serializer.save()
         
     @action(detail=True, methods=['get'], permission_classes=[IsAdminOnly])
@@ -104,6 +137,10 @@ class UserViewSet(viewsets.ModelViewSet):
         apartment_number = self.request.query_params.get('apartment_number')
         if apartment_number:
             query = query.filter(apartment__number=apartment_number)
+        
+        apartment_id = self.kwargs.get('apartment_id')
+        if apartment_id:
+            query = query.filter(apartment_id=apartment_id)
         return query.order_by('-created_date')
 
     def perform_create(self, serializer):
@@ -111,6 +148,85 @@ class UserViewSet(viewsets.ModelViewSet):
             raise permissions.PermissionDenied("Chỉ admin mới có thể tạo người dùng.")
         serializer.save()
 
+    def perform_update(self, serializer):
+        if self.request.user.role != 'ADMIN' and self.get_object().id != self.request.user.id:
+            raise permissions.PermissionDenied("Bạn chỉ có thể cập nhật thông tin của chính mình.")
+        avatar_file = self.request.FILES.get('avatar')
+        if avatar_file:
+            upload_result = cloudinary.uploader.upload(avatar_file, folder='avatars/')
+            serializer.save(avatar=upload_result['public_id'])
+        else:
+            serializer.save()
+
+    @action(detail=True, methods=['patch'], permission_classes=[IsAdminOnly])
+    def assign_apartment(self, request, pk=None):
+        user = self.get_object()
+        apartment_id = request.data.get('apartment_id')
+        if not apartment_id:
+            return Response({'error': 'Vui lòng cung cấp apartment_id'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            apartment = Apartment.objects.get(id=apartment_id)
+            user.apartment = apartment
+            user.save()
+            serializer = self.get_serializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Apartment.DoesNotExist:
+            return Response({'error': 'Căn hộ không tồn tại'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(methods=['get'], url_path='current-user', detail=False)
+    def get_current_user(self, request):
+        return Response(serializers.UserSerializer(request.user).data)
+        
+
+    @action(detail=True, methods=['get'])
+    def bills(self, request, pk=None):
+        user = self.get_object()
+        bills = Bill.objects.filter(user=user, active=True)
+        status_param = request.query_params.get('status')
+        if status_param:
+            bills = bills.filter(status=status_param)
+        page = self.paginate_queryset(bills)
+        if page is not None:
+            serializer = serializers.BillSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = serializers.BillSerializer(bills, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class BillViewSet(viewsets.ModelViewSet):
+    queryset = Bill.objects.filter(active=True)
+    serializer_class = serializers.BillSerializer
+    permission_classes = [IsAdminOrSelf]
+    pagination_class = paginators.ItemPagination
+    parser_classes = [MultiPartParser, FormParser]
+    
+    def get_queryset(self):
+        query = self.queryset
+        user_id = self.kwargs.get('user_id')
+        apartment_id = self.kwargs.get('apartment_id')
+        if user_id:
+            query = query.filter(user_id=user_id)
+        elif apartment_id:
+            query = query.filter(user__apartment_id=apartment_id)
+        else:
+            query = query.filter(user_id=self.request.user.id)  # Mặc định cho user hiện tại
+        q = self.request.query_params.get('q')
+        if q:
+            query = query.filter(description__icontains=q)
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            query = query.filter(status=status_param)
+        bill_type = self.request.query_params.get('bill_type')
+        if bill_type:
+            query = query.filter(bill_type=bill_type)
+        return query.order_by('-due_date')
+    
+    def perform_create(self, serializer):
+        if self.request.user.role != 'ADMIN':
+            raise permissions.PermissionDenied('Chỉ admin mới có thể tạo người dùng')
+        
+        serializer.save()
+        
     def perform_update(self, serializer):
         if self.request.user.role != 'ADMIN' and self.get_object().id != self.request.user.id:
             raise permissions.PermissionDenied("Bạn chỉ có thể cập nhật thông tin của chính mình.")
@@ -149,223 +265,490 @@ class UserViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
         serializer = serializers.BillSerializer(bills, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    
-    
-# class BillViewSet(viewsets.ViewSet, generics.ListAPIView):
-#     queryset = Bill.objects.filter(active=True)
-#     serializer_class = serializers.BillSerializer
-#     pagination_class = paginators.ItemPagination
-    
-#     def get_queryset(self):
-#         user_id = self.kwargs.get('user_id')
-#         queryset = self.queryset.filter(user_id=user_id)
-#         q = self.request.query_params.get('q')
-#         if q:
-#             queryset = queryset.filter(description__icontains=q)
-#         return queryset
+
+# Bill ViewSet
+class BillViewSet(viewsets.ModelViewSet):
+    queryset = Bill.objects.filter(active=True)
+    serializer_class = serializers.BillSerializer
+    permission_classes = [IsAdminOrSelf]
+    pagination_class = paginators.ItemPagination
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        query = self.queryset
+        user_id = self.kwargs.get('user_id') or self.request.user.id
+        query = query.filter(user_id=user_id)
+        q = self.request.query_params.get('q')
+        if q:
+            query = query.filter(description__icontains=q)
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            query = query.filter(status=status_param)
+        bill_type = self.request.query_params.get('bill_type')
+        if bill_type:
+            query = query.filter(bill_type=bill_type)
+        return query.order_by('-due_date')
+
+    def perform_create(self, serializer):
+        if self.request.user.role != 'ADMIN':
+            raise permissions.PermissionDenied("Chỉ admin mới có thể tạo hóa đơn.")
+        serializer.save()
+
+    @action(detail=True, methods=['patch'])
+    def upload_proof(self, request, pk=None):
+        bill = self.get_object()
+        if bill.user != request.user and request.user.role != 'ADMIN':
+            raise permissions.PermissionDenied("Bạn không có quyền cập nhật hóa đơn này.")
+        payment_proof = request.FILES.get('payment_proof')
+        if payment_proof:
+            upload_result = cloudinary.uploader.upload(payment_proof, folder='bills/')
+            bill.payment_proof = upload_result['public_id']
+        bill.payment_transaction_id = request.data.get('payment_transaction_id')
+        bill.status = 'pending'
+        bill.save()
+        serializer = self.get_serializer(bill)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['patch'], permission_classes=[IsAdminOnly])
+    def confirm(self, request, pk=None):
+        bill = self.get_object()
+        bill.status = 'paid'
+        bill.save()
+        Notification.objects.create(
+            user=bill.user,
+            title='Thanh toán xác nhận',
+            content=f'Hóa đơn {bill.id} đã được xác nhận.',
+            type='bill'
+        )
+        serializer = self.get_serializer(bill)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAdminOnly])
+    def generate_monthly(self, request):
+        residents = User.objects.filter(role='RESIDENT', apartment__isnull=False)
+        amount = request.data.get('amount', 500000)
+        description = request.data.get('description', 'Phí quản lý tháng này')
+        bills = [
+            Bill(
+                user=resident,
+                bill_type='management_fee',
+                amount=amount,
+                description=description,
+                payment_method='momo_tranfer',
+                due_date=timezone.now() + timezone.timedelta(days=30),
+            ) for resident in residents
+        ]
+        Bill.objects.bulk_create(bills)
+        return Response({'message': f'Đã tạo {len(bills)} hóa đơn'}, status=status.HTTP_201_CREATED)   
 
 
-# class ParkingCardViewSet(viewsets.ViewSet):
-#     queryset = ParkingCard.objects.filter(active=True)
-#     serializer_class = serializers.PackingCardSerializers
-#     pagination_class = paginators.ItemPagination
-    
-#     def get_queryset(self):
-#         queryset = self.queryset
-        
-#         user_id = self.kwargs.get('user_pk') or self.request.query_params.get('user_id')
-        
-#         # Nếu là cư dân, chỉ xem thẻ của mình
-#         if self.request.user.role == 'RESIDENT' and not user_id:
-#             queryset = queryset.filter(user=self.request.user)
-#         elif user_id:
-#             queryset = queryset.filter(user_id=user_id)
-        
-#         return queryset
-    
-    
+class ParkingCardViewSet(viewsets.ModelViewSet):
+    queryset = ParkingCard.objects.filter(active=True)
+    serializer_class = serializers.ParkingCardSerializer
+    permission_classes = [IsAdminOrSelf]
+    pagination_class = paginators.ItemPagination
 
-# # RelativeCard ViewSet
-# class RelativeCardViewSet(viewsets.ModelViewSet):
-#     queryset = RelativeCard.objects.filter(active=True)
-#     serializer_class = serializers.RelativeCardSerializer
-#     pagination_class = paginators.ItemPagination
-#     permission_classes = [permissions.IsAuthenticated]
-    
-#     def get_queryset(self):
-#         queryset = self.queryset
-        
-#         # Lấy user_id từ URL nested hoặc query parameter
-#         user_id = self.kwargs.get('user_pk') or self.request.query_params.get('user_id')
-        
-#         # Nếu là cư dân, chỉ xem thẻ của mình
-#         if self.request.user.role == 'RESIDENT' and not user_id:
-#             queryset = queryset.filter(resident=self.request.user)
-#         elif user_id:
-#             queryset = queryset.filter(resident_id=user_id)
-        
-#         # Lọc theo mối quan hệ
-#         relationship = self.request.query_params.get('relationship')
-#         if relationship:
-#             queryset = queryset.filter(relationship=relationship)
-        
-#         return queryset
-    
-    
-# # Locker ViewSet
-# class LockerViewSet(viewsets.ModelViewSet):
-#     queryset = Locker.objects.filter(active=True)
-#     serializer_class = serializers.LockerSerializer
-#     pagination_class = paginators.ItemPagination
-#     permission_classes = [permissions.IsAuthenticated]
-    
-#     def get_queryset(self):
-#         queryset = self.queryset
-        
-#         # Lấy user_id từ URL nested hoặc query parameter
-#         user_id = self.kwargs.get('user_pk') or self.request.query_params.get('user_id')
-        
-#         # Nếu là cư dân, chỉ xem tủ đồ của mình
-#         if self.request.user.role == 'RESIDENT' and not user_id:
-#             queryset = queryset.filter(user=self.request.user)
-#         elif user_id:
-#             queryset = queryset.filter(user_id=user_id)
-        
-#         # Lọc theo trạng thái
-#         status = self.request.query_params.get('status')
-#         if status:
-#             queryset = queryset.filter(status=status)
-        
-#         return queryset
-    
-    
-        
-       
+    def get_queryset(self):
+        query = self.queryset
+        user_id = self.kwargs.get('user_id') or self.request.user.id
+        query = query.filter(user_id=user_id)
+        card_code = self.request.query_params.get('card_code')
+        if card_code:
+            query = query.filter(card_code__icontains=card_code)
+        return query.order_by('-created_date')
 
-# # Feedback ViewSet
-# class FeedbackViewSet(viewsets.ModelViewSet):
-#     queryset = Feedback.objects.filter(active=True)
-#     serializer_class = serializers.FeedbackSerializer
-#     pagination_class = paginators.ItemPagination
-#     permission_classes = [permissions.IsAuthenticated]
-    
-#     def get_queryset(self):
-#         user_id = self.kwargs.get('user_id')
-#         queryset = self.queryset.filter(user_id=user_id)
-#         q = self.request.query_params.get('q')
-#         if q:
-#             queryset = queryset.filter(content__icontains=q)
-#         return queryset
-    
-    
-# # Survey ViewSet
-# class SurveyViewSet(viewsets.ModelViewSet):
-#     queryset = Survey.objects.filter(active=True)
-#     serializer_class = serializers.SurveySerializer
-#     pagination_class = paginators.ItemPagination
-#     permission_classes = [permissions.IsAuthenticated]
-    
-#     def get_queryset(self):
-#         query = self.queryset
-        
-#         # Lọc theo loại khảo sát
-#         choice = self.request.query_params.get('choice')
-#         if choice:
-#             query = query.filter(choice=choice)
-        
-#         # Lọc theo ngày
-#         now = timezone.now()
-#         active = self.request.query_params.get('active')
-#         if active == 'true':
-#             query = query.filter(start_date__lte=now, end_date__gte=now)
-#         elif active == 'false':
-#             query = query.filter(Q(end_date__lt=now) | Q(start_date__gt=now))
-        
-#         return query
-    
-    
-# # SurveyResult ViewSet
-# class SurveyResultViewSet(viewsets.ModelViewSet):
-#     queryset = SurveyResult.objects.filter(active=True)
-#     serializer_class = serializers.SurveyResultSerializer
-#     pagination_class = paginators.ItemPagination
-#     permission_classes = [permissions.IsAuthenticated]
-    
-#     def get_queryset(self):
-#         queryset = self.queryset
-        
-#         # Lấy user_id từ URL nested hoặc query parameter
-#         user_id = self.kwargs.get('user_pk') or self.request.query_params.get('user_id')
-        
-#         # Nếu là cư dân, chỉ xem kết quả của mình
-#         if self.request.user.role == 'RESIDENT' and not user_id:
-#             queryset = queryset.filter(user=self.request.user)
-#         elif user_id:
-#             queryset = queryset.filter(user_id=user_id)
-        
-#         # Lọc theo khảo sát
-#         survey_id = self.request.query_params.get('survey_id')
-#         if survey_id:
-#             queryset = queryset.filter(survey_id=survey_id)
-        
-#         return queryset
-    
-    
+    def perform_create(self, serializer):
+        if self.request.user.role != 'ADMIN':
+            raise permissions.PermissionDenied("Chỉ admin mới có thể cấp thẻ xe.")
+        serializer.save()
 
-# # Notification ViewSet
-# class NotificationViewSet(viewsets.ModelViewSet):
-#     queryset = Notification.objects.filter(active=True)
-#     serializer_class = serializers.NotificationSerializer
-#     pagination_class = paginators.ItemPagination
-#     permission_classes = [permissions.IsAuthenticated]
-    
-#     def get_queryset(self):
-#         queryset = self.queryset.filter(user=self.request.user)
-        
-#         # Lọc theo loại thông báo
-#         type = self.request.query_params.get('type')
-#         if type:
-#             queryset = queryset.filter(type=type)
-        
-#         # Lọc theo trạng thái đọc
-#         is_read = self.request.query_params.get('is_read')
-#         if is_read == 'true':
-#             queryset = queryset.filter(is_read=True)
-#         elif is_read == 'false':
-#             queryset = queryset.filter(is_read=False)
-        
-#         return queryset
-    
-    
+# RelativeCard ViewSet
+class RelativeCardViewSet(viewsets.ModelViewSet):
+    queryset = RelativeCard.objects.filter(active=True)
+    serializer_class = serializers.RelativeCardSerializer
+    permission_classes = [IsAdminOrSelf]
+    pagination_class = paginators.ItemPagination
 
-# # ChatMessage ViewSet
-# class ChatMessageViewSet(viewsets.ModelViewSet):
-#     queryset = ChatMessage.objects.filter(active=True)
-#     serializer_class = serializers.ChatMessageSerializer
-#     pagination_class = paginators.ItemPagination
-#     permission_classes = [permissions.IsAuthenticated]
-    
-#     def get_queryset(self):
-#         queryset = self.queryset.filter(
-#             Q(sender=self.request.user) | Q(receiver=self.request.user)
-#         )
-        
-#         # Lọc theo người gửi/người nhận
-#         user_id = self.request.query_params.get('user_id')
-#         if user_id:
-#             queryset = queryset.filter(
-#                 Q(sender_id=user_id, receiver=self.request.user) |
-#                 Q(receiver_id=user_id, sender=self.request.user)
-#             )
-        
-#         # Lọc theo trạng thái đọc
-#         is_read = self.request.query_params.get('is_read')
-#         if is_read == 'true':
-#             queryset = queryset.filter(is_read=True)
-#         elif is_read == 'false':
-#             queryset = queryset.filter(is_read=False)
-        
-#         return queryset.order_by('created_date')
-    
-  
+    def get_queryset(self):
+        query = self.queryset
+        user_id = self.kwargs.get('user_id') or self.request.user.id
+        query = query.filter(resident_id=user_id)
+        relationship = self.request.query_params.get('relationship')
+        if relationship:
+            query = query.filter(relationship=relationship)
+        return query.order_by('-created_date')
+
+    def perform_create(self, serializer):
+        if self.request.user.role != 'ADMIN':
+            raise permissions.PermissionDenied("Chỉ admin mới có thể cấp thẻ thân nhân.")
+        serializer.save()
+
+# Locker ViewSet
+class LockerViewSet(viewsets.ModelViewSet):
+    queryset = Locker.objects.filter(active=True)
+    serializer_class = serializers.LockerSerializer
+    permission_classes = [IsAdminOrSelf]
+    pagination_class = paginators.ItemPagination
+
+    def get_queryset(self):
+        query = self.queryset
+        user_id = self.kwargs.get('user_id') or self.request.user.id
+        query = query.filter(user_id=user_id)
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            query = query.filter(status=status_param)
+        return query.order_by('-created_date')
+
+    def perform_create(self, serializer):
+        if self.request.user.role != 'ADMIN':
+            raise permissions.PermissionDenied("Chỉ admin mới có thể tạo tủ đồ.")
+        serializer.save()
+
+    @action(detail=True, methods=['patch'])
+    def mark_received(self, request, pk=None):
+        locker = self.get_object()
+        if locker.user != request.user and request.user.role != 'ADMIN':
+            raise permissions.PermissionDenied("Bạn không có quyền cập nhật tủ đồ này.")
+        locker.status = 'received'
+        locker.received_at = timezone.now()
+        locker.save()
+        serializer = self.get_serializer(locker)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+# Feedback ViewSet
+class FeedbackViewSet(viewsets.ModelViewSet):
+    queryset = Feedback.objects.filter(active=True)
+    serializer_class = serializers.FeedbackSerializer
+    permission_classes = [IsAdminOrSelf]
+    pagination_class = paginators.ItemPagination
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        query = self.queryset
+        if self.request.user.role == 'RESIDENT':
+            query = query.filter(user=self.request.user)
+        user_id = self.kwargs.get('user_id')
+        if user_id and self.request.user.role == 'ADMIN':
+            query = query.filter(user_id=user_id)
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            query = query.filter(status=status_param)
+        return query.order_by('-created_date')
+
+    def perform_create(self, serializer):
+        if self.request.user.role != 'RESIDENT':
+            raise permissions.PermissionDenied("Chỉ cư dân mới có thể gửi phản hồi.")
+        image = self.request.FILES.get('image')
+        if image:
+            upload_result = cloudinary.uploader.upload(image, folder='feedbacks/')
+            serializer.save(user=self.request.user, image=upload_result['public_id'])
+        else:
+            serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['patch'], permission_classes=[IsAdminOnly])
+    def respond(self, request, pk=None):
+        feedback = self.get_object()
+        feedback.response = request.data.get('response')
+        feedback.status = 'resolved'
+        feedback.save()
+        Notification.objects.create(
+            user=feedback.user,
+            title='Phản hồi được trả lời',
+            content=f'Phản hồi {feedback.id} đã được giải quyết.',
+            type='feedback'
+        )
+        serializer = self.get_serializer(feedback)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+# Survey ViewSet
+class SurveyViewSet(viewsets.ModelViewSet):
+    queryset = Survey.objects.filter(active=True)
+    serializer_class = serializers.SurveySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = paginators.ItemPagination
+
+    def get_queryset(self):
+        query = self.queryset
+        choice = self.request.query_params.get('choice')
+        if choice:
+            query = query.filter(choice=choice)
+        now = timezone.now()
+        active = self.request.query_params.get('active')
+        if active == 'true':
+            query = query.filter(start_date__lte=now, end_date__gte=now)
+        elif active == 'false':
+            query = query.filter(Q(end_date__lt=now) | Q(start_date__gt=now))
+        return query.order_by('-start_date')
+
+    def perform_create(self, serializer):
+        if self.request.user.role != 'ADMIN':
+            raise permissions.PermissionDenied("Chỉ admin mới có thể tạo khảo sát.")
+        serializer.save(created_by=self.request.user)
+
+# SurveyResult ViewSet
+class SurveyResultViewSet(viewsets.ModelViewSet):
+    queryset = SurveyResult.objects.filter(active=True)
+    serializer_class = serializers.SurveyResultSerializer
+    permission_classes = [IsResidentOnly]
+    pagination_class = paginators.ItemPagination
+
+    def get_queryset(self):
+        query = self.queryset.filter(user=self.request.user)
+        survey_id = self.request.query_params.get('survey_id')
+        if survey_id:
+            query = query.filter(survey_id=survey_id)
+        return query.order_by('-created_date')
+
+    def perform_create(self, serializer):
+        survey_id = self.request.data.get('survey')
+        if SurveyResult.objects.filter(user=self.request.user, survey_id=survey_id).exists():
+            raise permissions.PermissionDenied("Bạn đã tham gia khảo sát này rồi.")
+        serializer.save(user=self.request.user)
+
+# Notification ViewSet
+class NotificationViewSet(viewsets.ModelViewSet):
+    queryset = Notification.objects.filter(active=True)
+    serializer_class = serializers.NotificationSerializer
+    permission_classes = [IsAdminOrSelf]
+    pagination_class = paginators.ItemPagination
+
+    def get_queryset(self):
+        query = self.queryset.filter(user=self.request.user)
+        type_param = self.request.query_params.get('type')
+        if type_param:
+            query = query.filter(type=type_param)
+        is_read = self.request.query_params.get('is_read')
+        if is_read == 'true':
+            query = query.filter(is_read=True)
+        elif is_read == 'false':
+            query = query.filter(is_read=False)
+        return query.order_by('-created_date')
+
+    @action(detail=True, methods=['patch'])
+    def mark_as_read(self, request, pk=None):
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save()
+        serializer = self.get_serializer(notification)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['patch'])
+    def mark_all_as_read(self, request):
+        notifications = self.get_queryset().filter(is_read=False)
+        notifications.update(is_read=True)
+        return Response({'message': f'Đã đánh dấu {notifications.count()} thông báo là đã đọc'}, status=status.HTTP_200_OK)
+
+# ChatMessage ViewSet
+class ChatMessageViewSet(viewsets.ModelViewSet):
+    queryset = ChatMessage.objects.filter(active=True)
+    serializer_class = serializers.ChatMessageSerializer
+    permission_classes = [IsAdminOrSelf]
+    pagination_class = paginators.ItemPagination
+
+    def get_queryset(self):
+        query = self.queryset.filter(
+            Q(sender=self.request.user) | Q(receiver=self.request.user)
+        )
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            query = query.filter(
+                Q(sender_id=user_id, receiver=self.request.user) |
+                Q(receiver_id=user_id, sender=self.request.user)
+            )
+        is_read = self.request.query_params.get('is_read')
+        if is_read == 'true':
+            query = query.filter(is_read=True)
+        elif is_read == 'false':
+            query = query.filter(is_read=False)
+        return query.order_by('created_date')
+
+    def perform_create(self, serializer):
+        receiver_id = self.request.data.get('receiver')
+        if not User.objects.filter(id=receiver_id, active=True).exists():
+            raise permissions.PermissionDenied("Người nhận không tồn tại.")
+        serializer.save(sender=self.request.user)
+
+    @action(detail=True, methods=['patch'])
+    def mark_as_read(self, request, pk=None):
+        message = self.get_object()
+        if message.receiver != request.user:
+            raise permissions.PermissionDenied("Bạn không phải người nhận tin nhắn này.")
+        message.is_read = True
+        message.save()
+        serializer = self.get_serializer(message)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+# PaymentAccount ViewSet
+class PaymentAccountViewSet(viewsets.ModelViewSet):
+    queryset = PaymentAccount.objects.filter(active=True)
+    serializer_class = serializers.PaymentAccountSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = paginators.ItemPagination
+
+    def get_queryset(self):
+        query = self.queryset
+        account_type = self.request.query_params.get('account_type')
+        if account_type:
+            query = query.filter(account_type=account_type)
+        return query.order_by('-created_date')
+
+    def perform_create(self, serializer):
+        if self.request.user.role != 'ADMIN':
+            raise permissions.PermissionDenied("Chỉ admin mới có thể tạo tài khoản thanh toán.")
+        serializer.save()
+
+    def perform_update(self, serializer):
+        if self.request.user.role != 'ADMIN':
+            raise permissions.PermissionDenied("Chỉ admin mới có thể cập nhật tài khoản thanh toán.")
+        serializer.save()
+
+class PaymentViewSet(viewsets.ModelViewSet):
+    queryset = Payment.objects.all()
+    serializer_class = serializers.PaymentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'ADMIN':
+            return Payment.objects.all()
+        return Payment.objects.filter(user=user)
+
+    @action(detail=False, methods=['post'])
+    def create_momo_payment(self, request):
+        try:
+            # Lấy thông tin từ request
+            bill_id = request.data.get('bill_id')
+            amount = request.data.get('amount')
+            user = request.user
+
+            # Kiểm tra bill
+            try:
+                bill = Bill.objects.get(id=bill_id)
+            except Bill.DoesNotExist:
+                return Response({
+                    'status': 'error',
+                    'message': 'Bill not found'
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            # Tạo order_id
+            order_id = f"BILL_{bill_id}_{int(datetime.now().timestamp())}"
+
+            # Tạo request data
+            request_data = {
+                'partnerCode': MOMO_CONFIG['PARTNER_CODE'],
+                'partnerName': "Apartment Management",
+                'storeId': "Apartment Management",
+                'requestId': order_id,
+                'amount': str(amount),
+                'orderId': order_id,
+                'orderInfo': f"Thanh toán hóa đơn {bill_id}",
+                'redirectUrl': MOMO_CONFIG['RETURN_URL'],
+                'ipnUrl': MOMO_CONFIG['NOTIFY_URL'],
+                'lang': 'vi',
+                'extraData': '',
+                'requestType': MOMO_CONFIG['REQUEST_TYPE'],
+                'items': [],
+                'userInfo': {
+                    'name': user.get_full_name(),
+                    'phoneNumber': user.phone,
+                    'email': user.email
+                }
+            }
+
+            # Tạo signature
+            raw_signature = f"accessKey={MOMO_CONFIG['ACCESS_KEY']}&amount={amount}&extraData=&ipnUrl={MOMO_CONFIG['NOTIFY_URL']}&orderId={order_id}&orderInfo=Thanh toán hóa đơn {bill_id}&partnerCode={MOMO_CONFIG['PARTNER_CODE']}&redirectUrl={MOMO_CONFIG['RETURN_URL']}&requestId={order_id}&requestType={MOMO_CONFIG['REQUEST_TYPE']}"
+            signature = hmac.new(
+                MOMO_CONFIG['SECRET_KEY'].encode(),
+                raw_signature.encode(),
+                hashlib.sha256
+            ).hexdigest()
+
+            request_data['signature'] = signature
+
+            # Gọi API Momo
+            response = requests.post(
+                MOMO_CONFIG['API_ENDPOINT'],
+                json=request_data,
+                headers={'Content-Type': 'application/json'}
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('resultCode') == 0:
+                    # Lưu thông tin thanh toán vào database
+                    payment = Payment.objects.create(
+                        user=user,
+                        bill=bill,
+                        amount=amount,
+                        payment_method='MOMO',
+                        status='PENDING',
+                        payment_url=result.get('payUrl'),
+                        payment_info=result
+                    )
+                    
+                    return Response({
+                        'status': 'success',
+                        'payment_url': result.get('payUrl'),
+                        'payment_id': payment.id
+                    })
+                else:
+                    return Response({
+                        'status': 'error',
+                        'message': result.get('message')
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({
+                    'status': 'error',
+                    'message': 'Payment gateway error'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            return Response({
+                'status': 'error',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'])
+    def momo_ipn(self, request):
+        # Xử lý IPN (Instant Payment Notification) từ Momo
+        try:
+            data = request.data
+            order_id = data.get('orderId')
+            result_code = data.get('resultCode')
+            trans_id = data.get('transId')
+            
+            # Lấy payment từ order_id
+            payment = Payment.objects.get(payment_info__requestId=order_id)
+            
+            if result_code == 0:  # Thanh toán thành công
+                payment.status = 'SUCCESS'
+                payment.transaction_id = trans_id
+                payment.payment_date = datetime.now()
+                payment.payment_info = data
+                payment.save()
+                
+                # Cập nhật trạng thái bill
+                bill = payment.bill
+                bill.status = 'PAID'
+                bill.save()
+                
+                # Tạo notification
+                Notification.objects.create(
+                    user=payment.user,
+                    title='Thanh toán thành công',
+                    content=f'Thanh toán hóa đơn {bill.id} thành công',
+                    type='PAYMENT'
+                )
+                
+            else:  # Thanh toán thất bại
+                payment.status = 'FAILED'
+                payment.payment_info = data
+                payment.save()
+                
+            return Response({'status': 'success'})
+            
+        except Exception as e:
+            return Response({
+                'status': 'error',
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
