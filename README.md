@@ -44,6 +44,11 @@ thuanvenv\Scripts\activate
 ```bash
 pip install -r requirements.txt
 ```
+- Create Database
+*Use the MySQL to create a database named:* **apartment_db**
+```bash
+CREATE DATABASE xxxx CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
 
 
 
