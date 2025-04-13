@@ -50,77 +50,78 @@ pip install -r requirements.txt
 ## 🌐 API Reference
 
 #### 🔐Authentication
-![POST](https://img.shields.io/badge/-POST-brightgreen)  
+
 Đăng nhập
-```http
+![POST](https://img.shields.io/badge/-POST-brightgreen)  
+```bash 
   POST /api/auth/login/
 ```
 Đăng xuất
 ![GET](https://img.shields.io/badge/-GET-blue)  
-```http
+```bash 
   POST /api/auth/logout/
 ```
 
 
 Lấy thông tin user hiện tại
 ![GET](https://img.shields.io/badge/-GET-blue)  
-```http
+```bash 
   GET /api/auth/showprofile/
 ```
 #### 👤User
 Get list user
 ![GET](https://img.shields.io/badge/-GET-blue)  
-```http
+```bash 
   GET /api/users/
 ```
 Get current-user
 ![GET](https://img.shields.io/badge/-GET-blue)  
-```http 
+```bash  
   GET /api/users/current-user/
 ```
 Change-pass
 ![POST](https://img.shields.io/badge/-POST-brightgreen)  
-```http
+```bash 
   POST /api/users/change_pass/
 ```
 complete_setup
 ![POST](https://img.shields.io/badge/-POST-brightgreen)  
-```http
+```bash 
   POST /api/users/complete_setup/
 ```
 assign_apartment
 ![PATCH](https://img.shields.io/badge/-PATCH-lightblue)  
-```http
+```bash 
   PATCH /api/users/{id}/assign_apartment/
 ```
 #### 🏢Apartments
 Get list Apartments![GET](https://img.shields.io/badge/-GET-blue)  
-```http
+```bash 
   GET /api/apartments/
 ```
 Create Apartment
 ![POST](https://img.shields.io/badge/-POST-brightgreen)  
-```http
+```bash 
   POST /api/apartments/
 ```
 Update info aparment
 ![PATCH](https://img.shields.io/badge/-PATCH-lightblue)  
-```http
+```bash 
   PATCH /api/apartments/{id}/
 ```
 Delete info apartment
 ![DELETE](https://img.shields.io/badge/-DELETE-red)  
-```http
+```bash 
   DELETE /api/apartments/{id}/
 ```
 Summary
 ![GET](https://img.shields.io/badge/-GET-blue)  
-```http
+```bash 
   GET /api/apartments/{id}/summary/
 ```
 Get list residents in apartments
 ![GET](https://img.shields.io/badge/-GET-blue)  
-```http
+```bash 
   GET /api/apartments/{id}/residents/
 ```
 
