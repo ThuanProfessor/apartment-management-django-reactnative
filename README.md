@@ -50,8 +50,8 @@ pip install -r requirements.txt
 ## 🌐 API Reference
 
 #### 🔐Authentication
-Đăng nhập
 ![POST](https://img.shields.io/badge/-POST-brightgreen)  
+Đăng nhập
 ```http
   POST /api/auth/login/
 ```
