@@ -5,7 +5,7 @@ Dự án quản lý chung cư bao gồm nhiều nghiệp vụ quan trọng, sử
     
 
 
-##🧩 Main Functionalities
+## 🧩 Main Functionalities
 - Quản lý cư dân
 - Quản lý căn hộ
 - Quản lý hoá đơn
