@@ -1,6 +1,3 @@
-To redesign the README for the **Apartment Management** project, I'll create a visually appealing, professional, and well-structured version that enhances readability and engagement. The new design will feature a clean layout, modern typography, consistent color-coded badges, and a polished presentation of the project's functionalities, installation steps, and API references. It will maintain all essential content while making it more intuitive and aesthetically pleasing, optimized for GitHub's markdown rendering.
-
-
 # <h1 align="center">🏢 Apartment Management System</h1>
 
 <p align="center">
