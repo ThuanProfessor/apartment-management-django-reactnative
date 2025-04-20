@@ -1,160 +1,94 @@
+<h1 align="center">🏢 Apartment Managements</h1>
 
-# **Apartment Managements**
+<p align="center">
+  <img src="https://img.shields.io/badge/Backend-Django%20Rest%20Framework-blue" />
+  <img src="https://img.shields.io/badge/Frontend-React%20Native-lightblue" />
+  <img src="https://img.shields.io/badge/Database-MySQL-yellowgreen" />
+  <img src="https://img.shields.io/badge/Auth-OAuth2%20%7C%20Token-red" />
+</p>
 
-Dự án quản lý chung cư bao gồm nhiều nghiệp vụ quan trọng, sử dụng Django Restful để cấu hình API và sử dụng React Native để xây dựng giao diện Mobile App, truy xuất dữ liệu bằng cách gọi các API đã được triển khai lên PythonAnyWhere.
-    
+<p align="center">✨ A full-stack apartment management system featuring resident and apartment handling, billing, feedback, surveys, and real-time chat. ✨</p>
 
+---
 
-## 🧩 Main Functionalities
-- Quản lý cư dân
-- Quản lý căn hộ
-- Quản lý hoá đơn
-- Quản lý thẻ gửi xe và thân nhân
-- Quản lý tủ đồ
-- Phản hồi
-- Khảo sát
-- Thông báo
-- Chat realtime
-- Xác thực tài khoản thanh toán
+## 🔧 Features
 
+- 👥 Resident Management  
+- 🏠 Apartment Management  
+- 📄 Invoice & Billing  
+- 🚗 Vehicle & Relative Card Management  
+- 📦 Locker Management  
+- 💬 Realtime Chat  
+- 📢 Announcement System  
+- 📊 Survey Handling  
+- 🔒 Payment Account Authentication  
 
+---
 
-## 🛠️Installation
+## 🚀 Installation Guide
 
-- Đầu tiên, bạn cần clone project về máy local thông qua **🔗HTTPS** hoặc **🔗SSH** :
+### 📁 Clone the Project
 
-🔗HTTPS:
+🔗 HTTPS:
 ```bash
-  https://github.com/ThuanProfessor/apartment-management-django-reactnative.git
-```
-🔗SSH:
-```bash
-  git@github.com:ThuanProfessor/apartment-management-django-reactnative.git
-```
+git clone https://github.com/ThuanProfessor/apartment-management-django-reactnative.git
+🔗 SSH:
 
-- Tạo môi trường ảo:
-```bash
+bash
+Copy
+Edit
+git clone git@github.com:ThuanProfessor/apartment-management-django-reactnative.git
+🐍 Virtual Environment
+bash
+Copy
+Edit
 python -m venv thuanvenv
-```
-- Kích hoạt môi trường ảo:
-```bash
 thuanvenv\Scripts\activate
-```
-- Cài đặt các thư viện quan trọng trong file requirements.txt:
-```bash
 pip install -r requirements.txt
-```
-- Create Database
-*Use the MySQL to create a database named:* **apartment_db**
-```bash
+🛠️ MySQL Database Setup
+sql
+Copy
+Edit
 CREATE DATABASE apartment_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
+🌐 API Reference
+🔐 Authentication
 
+Method	Endpoint	Description
+POST	/api/auth/login/	Đăng nhập
+POST	/api/auth/logout/	Đăng xuất
+GET	/api/auth/showprofile/	Lấy thông tin user
+👤 User
 
+Method	Endpoint	Description
+GET	/api/users/	Lấy danh sách user
+GET	/api/users/current-user/	User hiện tại
+POST	/api/users/change_pass/	Đổi mật khẩu
+POST	/api/users/complete_setup/	Hoàn tất cài đặt
+PATCH	/api/users/{id}/assign_apartment/	Gán căn hộ cho user
+🏢 Apartments
 
-## 🌐 API Reference
+Method	Endpoint	Description
+GET	/api/apartments/	Lấy danh sách căn hộ
+POST	/api/apartments/	Tạo mới căn hộ
+PATCH	/api/apartments/{id}/	Cập nhật thông tin căn hộ
+DELETE	/api/apartments/{id}/	Xoá căn hộ
+GET	/api/apartments/{id}/summary/	Tổng quan căn hộ
+GET	/api/apartments/{id}/residents/	Cư dân trong căn hộ
+🧰 Tech Stack
+Backend: Django REST Framework
 
-#### 🔐Authentication
+Mobile App: React Native
 
-Đăng nhập
-![POST](https://img.shields.io/badge/-POST-brightgreen)  
-```bash 
-  POST /api/auth/login/
-```
-Đăng xuất
-![GET](https://img.shields.io/badge/-GET-blue)  
-```bash 
-  POST /api/auth/logout/
-```
+Authentication: OAuth2, Token-based
 
+Database: MySQL
 
-Lấy thông tin user hiện tại
-![GET](https://img.shields.io/badge/-GET-blue)  
-```bash 
-  GET /api/auth/showprofile/
-```
-#### 👤User
-Get list user
-![GET](https://img.shields.io/badge/-GET-blue)  
-```bash 
-  GET /api/users/
-```
-Get current-user
-![GET](https://img.shields.io/badge/-GET-blue)  
-```bash  
-  GET /api/users/current-user/
-```
-Change-pass
-![POST](https://img.shields.io/badge/-POST-brightgreen)  
-```bash 
-  POST /api/users/change_pass/
-```
-complete_setup
-![POST](https://img.shields.io/badge/-POST-brightgreen)  
-```bash 
-  POST /api/users/complete_setup/
-```
-assign_apartment
-![PATCH](https://img.shields.io/badge/-PATCH-lightblue)  
-```bash 
-  PATCH /api/users/{id}/assign_apartment/
-```
-#### 🏢Apartments
-Get list Apartments![GET](https://img.shields.io/badge/-GET-blue)  
-```bash 
-  GET /api/apartments/
-```
-Create Apartment
-![POST](https://img.shields.io/badge/-POST-brightgreen)  
-```bash 
-  POST /api/apartments/
-```
-Update info aparment
-![PATCH](https://img.shields.io/badge/-PATCH-lightblue)  
-```bash 
-  PATCH /api/apartments/{id}/
-```
-Delete info apartment
-![DELETE](https://img.shields.io/badge/-DELETE-red)  
-```bash 
-  DELETE /api/apartments/{id}/
-```
-Summary
-![GET](https://img.shields.io/badge/-GET-blue)  
-```bash 
-  GET /api/apartments/{id}/summary/
-```
-Get list residents in apartments
-![GET](https://img.shields.io/badge/-GET-blue)  
-```bash 
-  GET /api/apartments/{id}/residents/
-```
+📬 Contact Me
+<p align="center"> <a href="mailto:beanheo2014@gmail.com"> <img src="https://img.shields.io/badge/Email-beanheo2014@gmail.com-D14836?style=flat-square&logo=gmail&logoColor=white"/> </a> <a href="https://www.linkedin.com/in/hoang-thuan-nguyen-87a538248/"> <img src="https://img.shields.io/badge/LinkedIn-Hoang%20Thuan%20Nguyen-0077B5?style=flat-square&logo=linkedin&logoColor=white"/> </a> <a href="https://www.facebook.com/thuan.nguyenhoang.161/"> <img src="https://img.shields.io/badge/Facebook-Thuan%20Nguyen-1877F2?style=flat-square&logo=facebook&logoColor=white"/> </a> </p>
+📌 License
 
 
 
 
-
-## ✉️Support
-
-Mọi thắt mắc xin vui lòng liên hệ mình thông qua email: beanheo2014@gmail.com
-
-
-## 🔍Tech Stack
-
-**Backend:** Django REST Framework (DRF)
-
-**Mobile Frontend:** React Native
-
-**Authentication:** Oauth2, Token-based Authentication
-
-**Database:** MySQL
-
-
-## Badges
-
-Add badges from somewhere like: [shields.io](https://shields.io/)
-
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
-[![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
-[![AGPL License](https://img.shields.io/badge/license-AGPL-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
-
+🙌 Support
+Nếu bạn có thắc mắc, hãy liên hệ qua email: beanheo2014@gmail.com
