@@ -1,160 +1,147 @@
-
-# **Apartment Managements**
-
-Dự án quản lý chung cư bao gồm nhiều nghiệp vụ quan trọng, sử dụng Django Restful để cấu hình API và sử dụng React Native để xây dựng giao diện Mobile App, truy xuất dữ liệu bằng cách gọi các API đã được triển khai lên PythonAnyWhere.
-    
+To redesign the README for the **Apartment Management** project, I'll create a visually appealing, professional, and well-structured version that enhances readability and engagement. The new design will feature a clean layout, modern typography, consistent color-coded badges, and a polished presentation of the project's functionalities, installation steps, and API references. It will maintain all essential content while making it more intuitive and aesthetically pleasing, optimized for GitHub's markdown rendering.
 
 
-## 🧩 Main Functionalities
-- Quản lý cư dân
-- Quản lý căn hộ
-- Quản lý hoá đơn
-- Quản lý thẻ gửi xe và thân nhân
-- Quản lý tủ đồ
-- Phản hồi
-- Khảo sát
-- Thông báo
-- Chat realtime
-- Xác thực tài khoản thanh toán
+# <h1 align="center">🏢 Apartment Management System</h1>
 
+<p align="center">
+  A comprehensive solution for managing apartments, built with <strong>Django REST Framework</strong> for robust APIs and <strong>React Native</strong> for a seamless mobile experience. Deployed on PythonAnywhere for reliable data access.
+</p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License" />
+  <img src="https://img.shields.io/badge/License-GPL%20v3-yellow.svg" alt="GPLv3 License" />
+  <img src="https://img.shields.io/badge/License-AGPL-blue.svg" alt="AGPL License" />
+</p>
 
-## 🛠️Installation
+---
 
-- Đầu tiên, bạn cần clone project về máy local thông qua **🔗HTTPS** hoặc **🔗SSH** :
+## 🌟 **Overview**
 
-🔗HTTPS:
+The **Apartment Management System** streamlines residential operations through a powerful backend and intuitive mobile app. Key features include resident management, billing, real-time chat, and more, all accessible via secure APIs.
+
+### 🧩 **Core Features**
+- **Resident Management**: Track and manage resident information.
+- **Apartment Management**: Handle apartment details and assignments.
+- **Billing**: Generate and manage invoices.
+- **Parking & Dependents**: Manage parking cards and dependent records.
+- **Locker Management**: Organize locker assignments.
+- **Feedback & Surveys**: Collect resident input.
+- **Notifications**: Send real-time updates.
+- **Real-Time Chat**: Enable instant communication.
+- **Payment Verification**: Secure account authentication.
+
+---
+
+## 🛠️ **Installation**
+
+Follow these steps to set up the project locally.
+
+### 1. Clone the Repository
+Use **HTTPS** or **SSH**:
 ```bash
-  https://github.com/ThuanProfessor/apartment-management-django-reactnative.git
-```
-🔗SSH:
-```bash
-  git@github.com:ThuanProfessor/apartment-management-django-reactnative.git
+# HTTPS
+git clone https://github.com/ThuanProfessor/apartment-management-django-reactnative.git
+
+# SSH
+git clone git@github.com:ThuanProfessor/apartment-management-django-reactnative.git
 ```
 
-- Tạo môi trường ảo:
+### 2. Set Up Virtual Environment
 ```bash
 python -m venv thuanvenv
 ```
-- Kích hoạt môi trường ảo:
+
+### 3. Activate Virtual Environment
 ```bash
+# Windows
 thuanvenv\Scripts\activate
+
+# macOS/Linux
+source thuanvenv/bin/activate
 ```
-- Cài đặt các thư viện quan trọng trong file requirements.txt:
+
+### 4. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
-- Create Database
-*Use the MySQL to create a database named:* **apartment_db**
-```bash
+
+### 5. Create Database
+Set up a MySQL database named `apartment_db`:
+```sql
 CREATE DATABASE apartment_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-
-
-## 🌐 API Reference
-
-#### 🔐Authentication
-
-Đăng nhập
-![POST](https://img.shields.io/badge/-POST-brightgreen)  
-```bash 
-  POST /api/auth/login/
-```
-Đăng xuất
-![GET](https://img.shields.io/badge/-GET-blue)  
-```bash 
-  POST /api/auth/logout/
+### 6. Run Migrations
+```bash
+python manage.py migrate
 ```
 
-
-Lấy thông tin user hiện tại
-![GET](https://img.shields.io/badge/-GET-blue)  
-```bash 
-  GET /api/auth/showprofile/
-```
-#### 👤User
-Get list user
-![GET](https://img.shields.io/badge/-GET-blue)  
-```bash 
-  GET /api/users/
-```
-Get current-user
-![GET](https://img.shields.io/badge/-GET-blue)  
-```bash  
-  GET /api/users/current-user/
-```
-Change-pass
-![POST](https://img.shields.io/badge/-POST-brightgreen)  
-```bash 
-  POST /api/users/change_pass/
-```
-complete_setup
-![POST](https://img.shields.io/badge/-POST-brightgreen)  
-```bash 
-  POST /api/users/complete_setup/
-```
-assign_apartment
-![PATCH](https://img.shields.io/badge/-PATCH-lightblue)  
-```bash 
-  PATCH /api/users/{id}/assign_apartment/
-```
-#### 🏢Apartments
-Get list Apartments![GET](https://img.shields.io/badge/-GET-blue)  
-```bash 
-  GET /api/apartments/
-```
-Create Apartment
-![POST](https://img.shields.io/badge/-POST-brightgreen)  
-```bash 
-  POST /api/apartments/
-```
-Update info aparment
-![PATCH](https://img.shields.io/badge/-PATCH-lightblue)  
-```bash 
-  PATCH /api/apartments/{id}/
-```
-Delete info apartment
-![DELETE](https://img.shields.io/badge/-DELETE-red)  
-```bash 
-  DELETE /api/apartments/{id}/
-```
-Summary
-![GET](https://img.shields.io/badge/-GET-blue)  
-```bash 
-  GET /api/apartments/{id}/summary/
-```
-Get list residents in apartments
-![GET](https://img.shields.io/badge/-GET-blue)  
-```bash 
-  GET /api/apartments/{id}/residents/
+### 7. Start the Server
+```bash
+python manage.py runserver
 ```
 
+---
 
+## 🌐 **API Reference**
 
+The API is built with **Django REST Framework** and supports secure, token-based authentication. Below are key endpoints.
 
+### 🔐 **Authentication**
+| Method | Endpoint                     | Description               |
+|--------|------------------------------|---------------------------|
+| <span style="color:green">POST</span>   | `/api/auth/login/`          | Authenticate user         |
+| <span style="color:blue">GET</span>     | `/api/auth/logout/`         | Log out user              |
+| <span style="color:blue">GET</span>     | `/api/auth/showprofile/`    | Get current user profile  |
 
-## ✉️Support
+### 👤 **Users**
+| Method | Endpoint                             | Description                     |
+|--------|--------------------------------------|---------------------------------|
+| <span style="color:blue">GET</span>     | `/api/users/`                       | List all users                 |
+| <span style="color:blue">GET</span>     | `/api/users/current-user/`          | Get current user details       |
+| <span style="color:green">POST</span>   | `/api/users/change_pass/`           | Change user password           |
+| <span style="color:green">POST</span>   | `/api/users/complete_setup/`        | Complete user setup            |
+| <span style="color:cyan">PATCH</span>   | `/api/users/{id}/assign_apartment/` | Assign apartment to user       |
 
-Mọi thắt mắc xin vui lòng liên hệ mình thông qua email: beanheo2014@gmail.com
+### 🏢 **Apartments**
+| Method | Endpoint                             | Description                          |
+|--------|--------------------------------------|--------------------------------------|
+| <span style="color:blue">GET</span>     | `/api/apartments/`                  | List all apartments                 |
+| <span style="color:green">POST</span>   | `/api/apartments/`                  | Create a new apartment              |
+| <span style="color:cyan">PATCH</span>   | `/api/apartments/{id}/`             | Update apartment details            |
+| <span style="color:red">DELETE</span>   | `/api/apartments/{id}/`             | Delete an apartment                 |
+| <span style="color:blue">GET</span>     | `/api/apartments/{id}/summary/`     | Get apartment summary               |
+| <span style="color:blue">GET</span>     | `/api/apartments/{id}/residents/`   | List residents in an apartment      |
 
+---
 
-## 🔍Tech Stack
+## 🔍 **Tech Stack**
 
-**Backend:** Django REST Framework (DRF)
+- **Backend**: Django REST Framework
+- **Frontend**: React Native
+- **Database**: MySQL
+- **Authentication**: OAuth2, Token-based
+- **Hosting**: PythonAnywhere
 
-**Mobile Frontend:** React Native
+---
 
-**Authentication:** Oauth2, Token-based Authentication
+## ✉️ **Support**
 
-**Database:** MySQL
+For questions or issues, reach out via email:  
+📧 [beanheo2014@gmail.com](mailto:beanheo2014@gmail.com)
 
+---
 
-## Badges
+## 📜 **Licenses**
 
-Add badges from somewhere like: [shields.io](https://shields.io/)
+<p align="center">
+  <a href="https://choosealicense.com/licenses/mit/"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License" /></a>
+  <a href="https://opensource.org/licenses/"><img src="https://img.shields.io/badge/License-GPL%20v3-yellow.svg" alt="GPLv3 License" /></a>
+  <a href="http://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/License-AGPL-blue.svg" alt="AGPL License" /></a>
+</p>
 
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
-[![GPLv3 License](https://img.shields.io/badge/License-GPL%20v3-yellow.svg)](https://opensource.org/licenses/)
-[![AGPL License](https://img.shields.io/badge/license-AGPL-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
+---
 
+<p align="center">
+  Built with 💻 and ☕ by <a href="https://github.com/ThuanProfessor">ThuanProfessor</a>
+</p>
