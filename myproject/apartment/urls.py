@@ -18,6 +18,7 @@ router.register('survey-results', views.SurveyResultViewSet, basename='survey-re
 router.register('notifications', views.NotificationViewSet, basename='notification')
 router.register('chat-messages', views.ChatMessageViewSet, basename='chat-message')
 router.register('payment-accounts', views.PaymentAccountViewSet, basename='payment-account')
+router.register('card-requests', views.CardRequestViewSet, basename='card-request')
 
 # router.register(r'users/(?P<user_id>\d+)/bills', views.BillViewSet, basename='user-bills')
 # router.register(r'users/(?P<user_id>\d+)/parking-cards', views.ParkingCardViewSet, basename='user-parking-cards')
@@ -42,5 +43,7 @@ router.register(r'surveys/(?P<survey_id>\d+)/results', views.SurveyResultViewSet
 
 urlpatterns = [
     path('', include(router.urls)),
+    # path('', include('user.urls')),
+    # path('accounts/', include('allauth.urls'))
 ]
 

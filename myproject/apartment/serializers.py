@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apartment.models import ChatMessage, User, Apartment, PaymentAccount, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult, Payment
+from apartment.models import ChatMessage, User, Apartment, PaymentAccount, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult, Payment, CardRequest
 from dataclasses import fields
 from re import S, U
 import cloudinary
@@ -177,6 +177,20 @@ class PaymentSerializer(serializers.ModelSerializer):
                  'payment_info', 'payment_date', 'created_date']
         read_only_fields = ['user', 'status', 'transaction_id', 
                           'payment_url', 'payment_info', 'payment_date']
+        
+
+class CardRequestSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.username', read_only=True)
+    
+    class Meta:
+        model = CardRequest
+        fields = ['id', 'user', 'user_name', 'type', 'name', 'relationship', 'status', 'created_date']
+        read_only_fields = ['user', 'status', 'created_date']
+
+    def validate(self, data):
+        if data['type'] == 'relative' and not data.get('relationship'):
+            raise serializers.ValidationError("Mối quan hệ là bắt buộc cho thẻ thân nhân.")
+        return data
 
 
 # class UserDetailSerializer(UserSerializer):
