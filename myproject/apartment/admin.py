@@ -1,6 +1,6 @@
 from string import Template
 from django.contrib import admin
-from apartment.models import User, Apartment, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult
+from apartment.models import CardRequest, User, Apartment, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult
 from django.utils.safestring import mark_safe
 from django.db.models import Count
 from django.template.response import TemplateResponse
@@ -97,6 +97,12 @@ class SurveyAdmin(admin.ModelAdmin):
         if survey.image:
             return mark_safe(f"<img src='/static/{survey.image.name}' width='100' />")
         return "Không có ảnh"
+    
+
+class CardRequestAdmin(admin.ModelAdmin):
+    list_display = ['user', 'type', 'name', 'relationship', 'status', 'created_date']
+    search_fields = ['user__username', 'name', 'type']
+    list_filter = ['type', 'status']
 
 
 #tạo instance của riêng
@@ -140,3 +146,5 @@ admin_site.register(Locker, LockerAdmin)
 admin_site.register(Feedback, FeedbackAdmin)
 admin_site.register(Survey, SurveyAdmin)
 admin_site.register(SurveyResult)
+admin_site.register(CardRequest, CardRequestAdmin)
+

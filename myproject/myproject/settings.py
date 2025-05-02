@@ -47,6 +47,12 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'oauth2_provider',
+    # 'allauth',
+    # 'allauth.account',
+    # 'allauth.socialaccount.providers.google',
+    # 'allauth.socialaccount.providers.github',
+    
+    
 
 ]
 
@@ -58,6 +64,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'myproject.urls'
@@ -120,6 +127,13 @@ REST_FRAMEWORK = {
     )
 }
 
+#Xác thực đăng nhập bằng social account
+# AUTHENTICATION_BACKENDS = [
+    
+#     'allauth.account.auth_backends.AuthennticationBackend', #allauth backend
+    
+# ]
+
 #Chứng thực user
 
 AUTH_USER_MODEL = 'apartment.User'
@@ -173,5 +187,5 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CLIENT_ID = 'y9o8EniSoOiWfR8OLZlfEARcdDjst2vFXdQgyzx0'
-CLIENT_SECRET = 'wbtbUzorW0wIZAEYTz35bvCFgqlnLqusIlVTeYpQtBexes2dq4Io7IfG6Bc8h2WzflkTyzW4ASoN07cAOD7LFc1Hx8e5nLVc0VH2RNiLvtWnDwh1SDIGGI4NfjqvjtkQ'
+CLIENT_ID = 'dMSwMkft04ug5sCU7qpyiTwOXawIYTGEVMQFl3pX'
+CLIENT_SECRET = '9EQtpvJWh68Uuy1fxFP1odtIFQ0JxOXs6viaKGYKdgEaqZtan0cLGFRUNm3G3Pk1luDEZMoNowV89yjMUFbp55XRWR4OM9dNXJLC0zh6Z40uyDED2lsRQEmsEh92Fiyg'

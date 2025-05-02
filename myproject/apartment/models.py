@@ -231,3 +231,24 @@ class Payment(BaseModel):
  
      def __str__(self):
          return f"Payment {self.id} - {self.amount} - {self.status}"
+     
+
+class CardRequest(BaseModel):
+    TYPE_CHOICES = (
+        ('relative', 'Thẻ thân nhân'),
+        ('parking', 'Thẻ giữ xe'),
+    )
+    STATUS_CHOICES = (
+        ('pending', 'Chờ duyệt'),
+        ('approved', 'Đã duyệt'),
+        ('rejected', 'Từ chối'),
+    )
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='card_requests')
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    name = models.CharField(max_length=100)
+    relationship = models.CharField(max_length=50, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+
+    def __str__(self):
+        return f"Yêu cầu {self.type} từ {self.user.username}"
