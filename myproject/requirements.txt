@@ -5,6 +5,7 @@ charset-normalizer==3.4.1
 cloudinary==1.43.0
 cryptography==44.0.2
 Django==5.1.7
+django-allauth==65.7.0
 django-ckeditor==6.7.2
 django-cloudinary-storage==0.3.0
 django-cors-headers==4.7.0
