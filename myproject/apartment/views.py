@@ -182,7 +182,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(methods=['get'], url_path='current-user', detail=False)
     def get_current_user(self, request):
         return Response(serializers.UserSerializer(request.user).data)
-        
+
 
     # @action(detail=True, methods=['get'])
     # def bills(self, request, pk=None):
