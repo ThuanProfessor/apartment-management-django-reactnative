@@ -115,10 +115,11 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'apartment_db',
-        'USER': 'root',
-        'PASSWORD': 'Admin@123',
-        'HOST': 'localhost', #port mặc định của local host
+        'NAME': 'bethuandethuong$thuan_apartments_db',
+        'USER': 'bethuandethuong',
+        'PASSWORD': 'thuan@04012004Ab',
+        'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com', #port mặc định của local host
+        'PORT': '',
     }
 }
 
