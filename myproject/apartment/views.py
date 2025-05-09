@@ -1,3 +1,4 @@
+from urllib import request
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -10,7 +11,10 @@ import cloudinary.uploader
 from apartment.models import Apartment, CardRequest, User, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult, PaymentAccount, Notification, ChatMessage, Payment
 from apartment import serializers, paginators
 from apartment.permissions import IsAdminOrSelf, IsAdminOnly, IsPasswordChanged, IsResidentOnly
-
+import logging
+from django.conf import settings
+logger = logging.getLogger(__name__)
+# from rest_framework import status
 
 class AuthViewSet(viewsets.ViewSet):
     permission_classes = [permissions.AllowAny]
@@ -23,23 +27,17 @@ class AuthViewSet(viewsets.ViewSet):
         user = authenticate(request, username=username, password=password)
         
         if user:
-            if not user.active:
-                return Response({'error': 'Tài khoản đã bị khóa'}, status=status.HTTP_400_BAD_REQUEST)
+            if user.is_locked:  # Sửa từ active sang is_locked
+                return Response({
+                    'error': 'Tài khoản đã bị khóa',
+                    'reason': user.lock_reason
+                }, status=status.HTTP_400_BAD_REQUEST)
             login(request, user)
             serializer = serializers.UserSerializer(user)
             return Response({'user': serializer.data}, status=status.HTTP_200_OK)
         
-        return Response({'error': 'Tên đăng nhập hoặc mật khẩu không đúng'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
-    def logout(self, request):
-        logout(request)
-        return Response({'message':'Đăng xuất thành công'}, status=status.HTTP_200_OK)
-    
-    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
-    def showprofile(self, request):
-        serializer = serializers.UserSerializer(request.user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({'error': 'Tên đăng nhập hoặc mật khẩu không đúng'}, 
+                       status=status.HTTP_400_BAD_REQUEST)
     
     
 class ApartmentViewSet(viewsets.ModelViewSet):
@@ -182,7 +180,7 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(methods=['get'], url_path='current-user', detail=False)
     def get_current_user(self, request):
         return Response(serializers.UserSerializer(request.user).data)
-        
+
 
     # @action(detail=True, methods=['get'])
     # def bills(self, request, pk=None):
@@ -224,9 +222,14 @@ class UserViewSet(viewsets.ModelViewSet):
 
     
     def perform_update(self, serializer):
+        # Kiểm tra first login và avatar cho resident
         if self.request.user.role == 'RESIDENT' and self.request.user.is_first_login:
             if not self.request.FILES.get('avatar'):
-                raise permissions.PermissionDenied("Cư dân phải upload avatar để hoàn tất thiết lập tài khoản.")
+                raise permissions.PermissionDenied(
+                    "Cư dân phải upload avatar để hoàn tất thiết lập tài khoản."
+                )
+            
+        # Xử lý upload avatar
         avatar_file = self.request.FILES.get('avatar')
         if avatar_file:
             upload_result = cloudinary.uploader.upload(avatar_file, folder='avatars/')
@@ -247,6 +250,41 @@ class UserViewSet(viewsets.ModelViewSet):
         user.is_first_login = False
         user.save()
         return Response({'message': 'Thiết lập tài khoản hoàn tất.'}, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['POST'], permission_classes=[IsAdminOnly])
+    def toggle_lock(self, request, pk=None):
+        try:
+            user = self.get_object()
+            reason = request.data.get('reason', '')
+            
+            if not reason and not user.is_locked:
+                return Response({
+                    'error': 'Vui lòng cung cấp lý do khóa tài khoản'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            user.is_locked = not user.is_locked
+            user.lock_reason = reason if user.is_locked else None
+            user.save()
+            
+            # Tạo thông báo
+            Notification.objects.create(
+                user=user,
+                title='Trạng thái tài khoản thay đổi',
+                content=f"Tài khoản của bạn đã được {'khóa' if user.is_locked else 'mở khóa'}" + 
+                        (f" với lý do: {reason}" if user.is_locked else ""),
+                type='system'
+            )
+            
+            return Response({
+                'status': 'success',
+                'message': f"Tài khoản đã được {'khóa' if user.is_locked else 'mở khóa'}",
+                'is_locked': user.is_locked,
+                'reason': user.lock_reason
+            })
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # Bill ViewSet
@@ -292,7 +330,6 @@ class BillViewSet(viewsets.ModelViewSet):
         bill.status = 'pending'
         bill.save()
         
-        # Tạo Payment
         Payment.objects.create(
             user=bill.user,
             bill=bill,
@@ -335,7 +372,146 @@ class BillViewSet(viewsets.ModelViewSet):
             ) for resident in residents
         ]
         Bill.objects.bulk_create(bills)
-        return Response({'message': f'Đã tạo {len(bills)} hóa đơn'}, status=status.HTTP_201_CREATED)   
+        return Response({'message': f'Đã tạo {len(bills)} hóa đơn'}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsResidentOnly, IsPasswordChanged])
+    def mock_momo_payment(self, request, pk=None):
+        try:
+            bill = self.get_object()
+            if bill.status != 'pending':
+                return Response({
+                    'error': 'Hóa đơn đã được thanh toán hoặc không hợp lệ'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if bill.user != request.user:
+                return Response({
+                    'error': 'Không có quyền thanh toán hóa đơn này'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            # Tạo transaction ID
+            transaction_id = f"MOCK-MOMO-{bill.id}-{int(timezone.now().timestamp())}"
+            amount = bill.amount
+
+            # Tạo payment_url giả lập
+            payment_url = f"{settings.MOCK_MOMO_REDIRECT_URL}?transactionId={transaction_id}&billId={bill.id}"
+
+            # Lưu giao dịch
+            payment = Payment.objects.create(
+                user=request.user,
+                bill=bill,
+                amount=amount,
+                payment_method='MOMO',
+                status='PENDING',
+                transaction_id=transaction_id,
+                payment_url=payment_url,
+                payment_info={
+                    'mock': True,
+                    'source': 'Mock MoMo API',
+                    'created_at': timezone.now().isoformat()
+                }
+            )
+
+            logger.info(f"Created mock MoMo payment: {transaction_id} for bill {bill.id}")
+
+            serializer = serializers.PaymentSerializer(payment)
+            return Response({
+                'payment_url': payment_url,
+                'transaction_id': transaction_id,
+                'bill_id': bill.id,
+                'payment': serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Error creating mock MoMo payment: {str(e)}")
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['post'], url_path='mock-momo/webhook', 
+            permission_classes=[permissions.AllowAny])
+    def mock_momo_webhook(self, request):
+        try:
+            logger.info(f"Received mock MoMo webhook: {request.data}")
+            
+            data = request.data
+            transaction_id = data.get('transactionId')
+            bill_id = data.get('billId')
+            result_code = data.get('resultCode', 0)  # 0: thành công, khác: thất bại
+
+            # Tìm giao dịch
+            payment = Payment.objects.filter(
+                transaction_id=transaction_id, 
+                bill__id=bill_id
+            ).first()
+            
+            if not payment:
+                logger.error(f"Payment not found: {transaction_id}")
+                return Response({
+                    'error': 'Giao dịch không tồn tại'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Cập nhật trạng thái
+            if result_code == 0:
+                payment.status = 'SUCCESS'
+                payment.payment_date = timezone.now()
+                payment.bill.status = 'paid'
+                payment.bill.payment_transaction_id = transaction_id
+                payment.bill.payment_method = 'online'
+                payment.bill.save()
+                payment.save()
+
+                # Gửi thông báo
+                Notification.objects.create(
+                    user=payment.user,
+                    title='Thanh toán thành công',
+                    content=f'Hóa đơn {payment.bill.id} đã được thanh toán qua MoMo.',
+                    type='bill'
+                )
+                
+                logger.info(f"Payment successful: {transaction_id}")
+            else:
+                payment.status = 'FAILED'
+                payment.save()
+                logger.error(f"Payment failed: {transaction_id}")
+
+            serializer = serializers.PaymentSerializer(payment)
+            return Response({
+                'message': 'Webhook processed',
+                'transaction_id': transaction_id,
+                'payment': serializer.data
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Error processing mock MoMo webhook: {str(e)}")
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['get'], url_path='mock-momo/success', permission_classes=[IsResidentOnly, IsPasswordChanged])
+    def mock_momo_success(self, request):
+        transaction_id = request.query_params.get('transactionId')
+        bill_id = request.query_params.get('billId')
+
+        # Tìm giao dịch
+        payment = Payment.objects.filter(
+            transaction_id=transaction_id, 
+            bill__id=bill_id, 
+            user=request.user
+        ).first()
+        if not payment:
+            return Response({'error': 'Giao dịch không tồn tại hoặc không thuộc về bạn'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = serializers.PaymentSerializer(payment)
+        if payment.status == 'SUCCESS':
+            return Response({
+                'message': 'Thanh toán giả lập thành công!',
+                'payment': serializer.data
+            }, status=status.HTTP_200_OK)
+        return Response({
+            'error': 'Thanh toán chưa hoàn tất hoặc thất bại',
+            'payment': serializer.data
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ParkingCardViewSet(viewsets.ModelViewSet):
@@ -374,8 +550,6 @@ class ParkingCardViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     
-
-
 class CardRequestViewSet(viewsets.ModelViewSet):
     queryset = CardRequest.objects.all()
     serializer_class = serializers.CardRequestSerializer
@@ -505,7 +679,13 @@ class LockerViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         if self.request.user.role != 'ADMIN':
             raise permissions.PermissionDenied("Chỉ admin mới có thể tạo tủ đồ.")
-        serializer.save()
+        locker = serializer.save()
+        Notification.objects.create(
+            user=locker.user,
+            title='Hàng mới trong tủ đồ',
+            content=f'Bạn có hàng mới trong tủ đồ: {locker.description}.',
+            type='system'
+        )
 
     @action(detail=True, methods=['patch'])
     def mark_received(self, request, pk=None):

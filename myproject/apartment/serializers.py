@@ -79,6 +79,27 @@ class UserSerializer(ItemSerializer):
         
         return super().update(instance, validated_date)
     
+
+class MockMomoPayment:
+    @staticmethod
+    def create_payment_url(amount, bill_id):
+        # Tạo mock payment URL
+        return {
+            'status': 'success',
+            'message': 'Mock Payment URL created',
+            'pay_url': f'http://mock-momo.com/pay/{bill_id}',
+            'transaction_id': f'MOCK_{bill_id}_{int(time.time())}'
+        }
+
+    @staticmethod
+    def verify_payment(transaction_id):
+       #Mock payment verification
+        return {
+            'status': 'success',
+            'message': 'Payment verified',
+            'transaction_id': transaction_id
+        }
+
     
 class BillSerializer(ItemSerializer):
     apartment_number = serializers.CharField(source='apartment.number', read_only=True)
