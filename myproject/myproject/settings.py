@@ -32,6 +32,21 @@ DEBUG = False
 
 ALLOWED_HOSTS = ['thuannguyen.pythonanywhere.com', '127.0.0.1', 'localhost']
 
+MOCK_MOMO_REDIRECT_URL = 'http://your-frontend-url/payment/result'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
 
 # Application definition
 
@@ -103,7 +118,7 @@ DATABASES = {
         'NAME': 'apartment_db',
         'USER': 'root',
         'PASSWORD': 'Admin@123',
-        'HOST': 'yourusername.mysql.pythonanywhere-services.com', #port mặc định của local host
+        'HOST': 'localhost', #port mặc định của local host
     }
 }
 
