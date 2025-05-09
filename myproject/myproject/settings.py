@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 import oauth2_provider
@@ -27,9 +28,9 @@ MEDIA_ROOT = '%s/apartment/static/' % BASE_DIR
 SECRET_KEY = 'django-insecure-&50v86qw!i0=7i)8nlf7vno-6b9p1ef)=pf7)w-h%butz1_inu'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['thuannguyen.pythonanywhere.com', '127.0.0.1', 'localhost']
 
 
 # Application definition
@@ -47,6 +48,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'oauth2_provider',
+    'corsheaders',
     # 'allauth',
     # 'allauth.account',
     # 'allauth.socialaccount.providers.google',
@@ -64,6 +66,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     # 'allauth.account.middleware.AccountMiddleware',
 ]
 
@@ -97,7 +103,7 @@ DATABASES = {
         'NAME': 'apartment_db',
         'USER': 'root',
         'PASSWORD': 'Admin@123',
-        'HOST': 'localhost', #port mặc định của local host
+        'HOST': 'yourusername.mysql.pythonanywhere-services.com', #port mặc định của local host
     }
 }
 
@@ -181,11 +187,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+# Mock MoMo Configuration
+MOCK_MOMO_REDIRECT_URL = "http://thuannguyen.pythonanywhere.com/bills/mock-momo/success/"
+MOCK_MOMO_IPN_URL = "http://nguyennguyen.pythonanywhere.com/bills/mock-momo/webhook/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CLIENT_ID = 'dMSwMkft04ug5sCU7qpyiTwOXawIYTGEVMQFl3pX'
-CLIENT_SECRET = '9EQtpvJWh68Uuy1fxFP1odtIFQ0JxOXs6viaKGYKdgEaqZtan0cLGFRUNm3G3Pk1luDEZMoNowV89yjMUFbp55XRWR4OM9dNXJLC0zh6Z40uyDED2lsRQEmsEh92Fiyg'
+CLIENT_ID = 'nmfiua1CP6DB5tFtChl96dluStatcErfY07eKaI0'
+CLIENT_SECRET = 'DaOK74jAJVrto79YLYEEnRwuz2LcywOFdsgeM3TFFvt7fcLJiyRwxsm1f9IFZvxE09UnEjwsAaJiTp7krBsrjwmDjZRBX5KUqJfPGxeJNNStc8McReWNvdjXtcPVV5vx'

@@ -1,3 +1,4 @@
+from urllib import request
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -292,7 +293,6 @@ class BillViewSet(viewsets.ModelViewSet):
         bill.status = 'pending'
         bill.save()
         
-        # Tạo Payment
         Payment.objects.create(
             user=bill.user,
             bill=bill,
@@ -335,7 +335,111 @@ class BillViewSet(viewsets.ModelViewSet):
             ) for resident in residents
         ]
         Bill.objects.bulk_create(bills)
-        return Response({'message': f'Đã tạo {len(bills)} hóa đơn'}, status=status.HTTP_201_CREATED)   
+        return Response({'message': f'Đã tạo {len(bills)} hóa đơn'}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsResidentOnly, IsPasswordChanged])
+    def mock_momo_payment(self, request, pk=None):
+        bill = self.get_object()
+        if bill.status != 'pending':
+            return Response({'error': 'Hóa đơn đã được thanh toán hoặc không hợp lệ'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+        if bill.user != request.user:
+            return Response({'error': 'Không có quyền thanh toán hóa đơn này'}, 
+                            status=status.HTTP_403_FORBIDDEN)
+
+        # Tạo transaction ID
+        transaction_id = f"MOCK-MOMO-{bill.id}-{int(timezone.now().timestamp())}"
+        amount = bill.amount
+
+        # Tạo payment_url giả lập
+        payment_url = f"{settings.MOCK_MOMO_REDIRECT_URL}?transactionId={transaction_id}&billId={bill.id}"
+
+        # Lưu giao dịch
+        payment = Payment.objects.create(
+            user=request.user,
+            bill=bill,
+            amount=amount,
+            payment_method='MOMO',
+            status='PENDING',
+            transaction_id=transaction_id,
+            payment_url=payment_url,
+            payment_info={'mock': True, 'source': 'Mock MoMo API'}
+        )
+
+        serializer = serializers.PaymentSerializer(payment)
+        return Response({
+            'payment_url': payment_url,
+            'transaction_id': transaction_id,
+            'bill_id': bill.id,
+            'payment': serializer.data
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='mock-momo/webhook', permission_classes=[permissions.AllowAny])
+    def mock_momo_webhook(self, request):
+        data = request.data
+        transaction_id = data.get('transactionId')
+        bill_id = data.get('billId')
+        result_code = data.get('resultCode', 0)  # 0: thành công, khác: thất bại
+
+        # Tìm giao dịch
+        payment = Payment.objects.filter(transaction_id=transaction_id, bill__id=bill_id).first()
+        if not payment:
+            return Response({'error': 'Giao dịch không tồn tại'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Cập nhật trạng thái
+        if result_code == 0:
+            payment.status = 'SUCCESS'
+            payment.payment_date = timezone.now()
+            payment.bill.status = 'paid'
+            payment.bill.payment_transaction_id = transaction_id
+            payment.bill.payment_method = 'online'
+            payment.bill.save()
+            payment.save()
+
+            # Gửi thông báo
+            Notification.objects.create(
+                user=payment.user,
+                title='Thanh toán giả lập thành công',
+                content=f'Hóa đơn {payment.bill.id} đã được thanh toán qua MoMo giả lập.',
+                type='bill'
+            )
+        else:
+            payment.status = 'FAILED'
+            payment.save()
+
+        serializer = serializers.PaymentSerializer(payment)
+        return Response({
+            'message': 'Webhook processed',
+            'transaction_id': transaction_id,
+            'payment': serializer.data
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='mock-momo/success', permission_classes=[IsResidentOnly, IsPasswordChanged])
+    def mock_momo_success(self, request):
+        transaction_id = request.query_params.get('transactionId')
+        bill_id = request.query_params.get('billId')
+
+        # Tìm giao dịch
+        payment = Payment.objects.filter(
+            transaction_id=transaction_id, 
+            bill__id=bill_id, 
+            user=request.user
+        ).first()
+        if not payment:
+            return Response({'error': 'Giao dịch không tồn tại hoặc không thuộc về bạn'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = serializers.PaymentSerializer(payment)
+        if payment.status == 'SUCCESS':
+            return Response({
+                'message': 'Thanh toán giả lập thành công!',
+                'payment': serializer.data
+            }, status=status.HTTP_200_OK)
+        return Response({
+            'error': 'Thanh toán chưa hoàn tất hoặc thất bại',
+            'payment': serializer.data
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ParkingCardViewSet(viewsets.ModelViewSet):
@@ -374,8 +478,6 @@ class ParkingCardViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     
-
-
 class CardRequestViewSet(viewsets.ModelViewSet):
     queryset = CardRequest.objects.all()
     serializer_class = serializers.CardRequestSerializer
@@ -505,7 +607,13 @@ class LockerViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         if self.request.user.role != 'ADMIN':
             raise permissions.PermissionDenied("Chỉ admin mới có thể tạo tủ đồ.")
-        serializer.save()
+        locker = serializer.save()
+        Notification.objects.create(
+            user=locker.user,
+            title='Hàng mới trong tủ đồ',
+            content=f'Bạn có hàng mới trong tủ đồ: {locker.description}.',
+            type='system'
+        )
 
     @action(detail=True, methods=['patch'])
     def mark_received(self, request, pk=None):
