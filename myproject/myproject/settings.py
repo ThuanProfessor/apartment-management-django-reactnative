@@ -30,7 +30,11 @@ SECRET_KEY = 'django-insecure-&50v86qw!i0=7i)8nlf7vno-6b9p1ef)=pf7)w-h%butz1_inu
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['thuannguyen.pythonanywhere.com', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = [
+    'bethuandethuong.pythonanywhere.com',
+    'localhost',
+    '127.0.0.1'
+]
 
 MOCK_MOMO_REDIRECT_URL = 'http://your-frontend-url/payment/result'
 
@@ -69,11 +73,41 @@ INSTALLED_APPS = [
     # 'allauth.socialaccount.providers.google',
     # 'allauth.socialaccount.providers.github',
     
+
+    
     
 
 ]
 
+CORS_ALLOW_ALL_ORIGINS = True  # Trong môi trường development
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:19006",  # cho React Native Expo
+]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
