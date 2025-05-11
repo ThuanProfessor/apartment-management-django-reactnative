@@ -157,6 +157,16 @@ DATABASES = {
     }
 }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'apartment_db',
+#         'USER': 'root',
+#         'PASSWORD': 'Admin@123',
+#         'HOST': 'localhost', #port mặc định của local host
+#     }
+# }
+
 #Setting cho Cloudinary
 import cloudinary
 import cloudinary.uploader
