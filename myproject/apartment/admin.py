@@ -57,11 +57,14 @@ class UserAdmin(BaseUserAdmin):
     list_filter = ['role', 'apartment', 'active']
     
     fieldsets = BaseUserAdmin.fieldsets + (
-        ('Custom Fields', {'fields': ('role', 'phone', 'apartment', 'is_first_login', 'active')}),
+        ('Custom Fields', {'fields': ('role', 'phone', 'apartment', 'is_first_login', 'active', 'avatar', 'is_locked', 'lock_reason')}),
     )
     
-    add_fieldsets = BaseUserAdmin.add_fieldsets + (
-        ('Custom Fields', {'fields': ('role', 'phone', 'apartment', 'is_first_login', 'active')}),
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'password1', 'password2', 'role', 'phone', 'apartment', 'is_first_login', 'active'),
+        }),
     )
 
 
