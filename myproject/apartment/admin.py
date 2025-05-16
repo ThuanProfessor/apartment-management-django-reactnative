@@ -34,7 +34,14 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 class CustomUserCreationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = UserCreationForm.Meta.fields + ('role', 'phone', 'apartment', 'is_first_login', 'active')
+        fields = ('username', 'email', 'password1', 'password2', 'role', 'phone', 'apartment', 'is_first_login', 'active')
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data['password1'])
+        if commit:
+            user.save()
+        return user
 
 class CustomUserChangeForm(UserChangeForm):
     class Meta(UserChangeForm.Meta):
