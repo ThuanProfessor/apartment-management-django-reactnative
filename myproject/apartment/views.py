@@ -720,7 +720,12 @@ class LockerViewSet(viewsets.ModelViewSet):
             type='system'
         )
 
-    @action(detail=True, methods=['patch'])
+    def mark_as_received(self, request, pk=None):
+        locker = self.get_object()
+        locker.status = 'received'
+        locker.received_at = timezone.now()
+        locker.save()
+        return Response(status=status.HTTP_200_OK)
 
 # Feedback ViewSet
 class FeedbackViewSet(viewsets.ModelViewSet):
@@ -770,6 +775,7 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         )
         serializer = self.get_serializer(feedback)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 # Survey ViewSet
 class SurveyViewSet(viewsets.ModelViewSet):
