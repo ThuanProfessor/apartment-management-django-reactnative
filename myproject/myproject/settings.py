@@ -147,27 +147,27 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 #Database trên PythonAnywhere
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'bethuandethuong$thuan_apartments_db',
-#         'USER': 'bethuandethuong',
-#         'PASSWORD': 'thuan@04012004Ab',
-#         'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com', #port mặc định của local host
-#         'PORT': '',
-#     }
-# }
-
-#Database local
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'apartment_db',
-        'USER': 'root',
-        'PASSWORD': 'Admin@123',
-        'HOST': 'localhost', #port mặc định của local host
+        'NAME': 'bethuandethuong$thuan_apartments_db',
+        'USER': 'bethuandethuong',
+        'PASSWORD': 'thuan@04012004Ab',
+        'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com', #port mặc định của local host
+        'PORT': '',
     }
 }
+
+#Database local
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'apartment_db',
+#         'USER': 'root',
+#         'PASSWORD': 'Admin@123',
+#         'HOST': 'localhost', #port mặc định của local host
+#     }
+# }
 
 #Setting cho Cloudinary
 import cloudinary
