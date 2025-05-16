@@ -146,26 +146,28 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'bethuandethuong$thuan_apartments_db',
-        'USER': 'bethuandethuong',
-        'PASSWORD': 'thuan@04012004Ab',
-        'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com', #port mặc định của local host
-        'PORT': '',
-    }
-}
-
+#Database trên PythonAnywhere
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'apartment_db',
-#         'USER': 'root',
-#         'PASSWORD': 'Admin@123',
-#         'HOST': 'localhost', #port mặc định của local host
+#         'NAME': 'bethuandethuong$thuan_apartments_db',
+#         'USER': 'bethuandethuong',
+#         'PASSWORD': 'thuan@04012004Ab',
+#         'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com', #port mặc định của local host
+#         'PORT': '',
 #     }
 # }
+
+#Database local
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'apartment_db',
+        'USER': 'root',
+        'PASSWORD': 'Admin@123',
+        'HOST': 'localhost', #port mặc định của local host
+    }
+}
 
 #Setting cho Cloudinary
 import cloudinary
@@ -258,5 +260,5 @@ MOCK_MOMO_IPN_URL = "http://nguyennguyen.pythonanywhere.com/bills/mock-momo/webh
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CLIENT_ID = 'nmfiua1CP6DB5tFtChl96dluStatcErfY07eKaI0'
-CLIENT_SECRET = 'DaOK74jAJVrto79YLYEEnRwuz2LcywOFdsgeM3TFFvt7fcLJiyRwxsm1f9IFZvxE09UnEjwsAaJiTp7krBsrjwmDjZRBX5KUqJfPGxeJNNStc8McReWNvdjXtcPVV5vx'
+CLIENT_ID = 'NkMjZTSBUvor7dOEN1AAeTvPkioq2ZoBQYqfqrTx'
+CLIENT_SECRET = 'cQq1QDZzBJOYi5pYitjQ2EMGGITqqaVJEVJrCSabQ6TrPMyBhqYPzUdJMHzWYeYAZNx1NuY1bCYWST3LlWoGA298EMwQAlMtEIehlWIlI5dNbcz6yjXNi16bDxbiuCZM'

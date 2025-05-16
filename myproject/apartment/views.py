@@ -114,7 +114,40 @@ class UserViewSet(viewsets.ModelViewSet):
     pagination_class = paginators.ItemPagination
     parser_classes = [MultiPartParser, FormParser]
     
-    
+    @action(detail=False, methods=['post'])
+    def upload_avatar(self, request):
+        try:
+            if 'file' not in request.FILES:
+                return Response({'error': 'No file uploaded'}, status=400)
+                
+            file = request.FILES['file']
+            # Validate file type
+            if not file.content_type.startswith('image/'):
+                return Response({'error': 'File must be an image'}, status=400)
+                
+            # Upload to Cloudinary
+            result = cloudinary.uploader.upload(
+                file,
+                folder='avatars/',
+                transformation=[
+                    {'width': 200, 'height': 200, 'crop': 'fill'}
+                ]
+            )
+            
+            # Update user avatar
+            request.user.avatar = result['secure_url']
+            request.user.save()
+            
+            return Response({
+                'avatar_url': result['secure_url'],
+                'message': 'Avatar uploaded successfully'
+            })
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=400)
+
     def get_queryset(self):
         
         if getattr(self, 'swagger_fake_view', False):
@@ -688,15 +721,6 @@ class LockerViewSet(viewsets.ModelViewSet):
         )
 
     @action(detail=True, methods=['patch'])
-    def mark_received(self, request, pk=None):
-        locker = self.get_object()
-        if locker.user != request.user and request.user.role != 'ADMIN':
-            raise permissions.PermissionDenied("Bạn không có quyền cập nhật tủ đồ này.")
-        locker.status = 'received'
-        locker.received_at = timezone.now()
-        locker.save()
-        serializer = self.get_serializer(locker)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
 # Feedback ViewSet
 class FeedbackViewSet(viewsets.ModelViewSet):
