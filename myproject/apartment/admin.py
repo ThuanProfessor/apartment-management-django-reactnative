@@ -28,10 +28,34 @@ class ApartmentAdmin(admin.ModelAdmin):
         }
 
 
-class UserAdmin(admin.ModelAdmin):
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+
+class CustomUserCreationForm(UserCreationForm):
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = UserCreationForm.Meta.fields + ('role', 'phone', 'apartment', 'is_first_login', 'active')
+
+class CustomUserChangeForm(UserChangeForm):
+    class Meta(UserChangeForm.Meta):
+        model = User
+        fields = UserChangeForm.Meta.fields
+
+class UserAdmin(BaseUserAdmin):
+    form = CustomUserChangeForm
+    add_form = CustomUserCreationForm
+    
     list_display = ['id', 'username', 'role', 'phone', 'apartment', 'is_first_login', 'active']
     search_fields = ['username', 'role', 'phone', 'apartment']
     list_filter = ['role', 'apartment', 'active']
+    
+    fieldsets = BaseUserAdmin.fieldsets + (
+        ('Custom Fields', {'fields': ('role', 'phone', 'apartment', 'is_first_login', 'active')}),
+    )
+    
+    add_fieldsets = BaseUserAdmin.add_fieldsets + (
+        ('Custom Fields', {'fields': ('role', 'phone', 'apartment', 'is_first_login', 'active')}),
+    )
 
 
 class BillAdmin(admin.ModelAdmin):
