@@ -1,8 +1,7 @@
-from django.db import router
 from django.urls import path, include
-from . import views
 from rest_framework.routers import DefaultRouter
-from rest_framework_nested import routers
+from . import views
+from apartment.views import PaymentView, PaymentReturnView, PaymentIPNView
 
 router = DefaultRouter()
 router.register('auth', views.AuthViewSet, basename='auth')
@@ -21,6 +20,9 @@ router.register('chat-messages', views.ChatMessageViewSet)
 router.register('payment-accounts', views.PaymentAccountViewSet)
 router.register('card-requests', views.CardRequestViewSet, basename='card-request')
 router.register('upload-avatar', views.UploadAvatarViewSet, basename='upload-avatar')
+
+# router.register('vnpay', views.VNPayViewSet, basename='vnpay')
+
 
 # router.register(r'users/(?P<user_id>\d+)/bills', views.BillViewSet, basename='user-bills')
 # router.register(r'users/(?P<user_id>\d+)/parking-cards', views.ParkingCardViewSet, basename='user-parking-cards')
@@ -46,5 +48,9 @@ urlpatterns = [
     path('', include(router.urls)),
     # path('', include('user.urls')),
     # path('accounts/', include('allauth.urls'))
+    path('api/payment/create/', PaymentView.as_view(), name='payment-create'),
+    path('api/payment/return/', PaymentReturnView.as_view(), name='payment-return'),
+    path('api/payment/ipn/', PaymentIPNView.as_view(), name='payment-ipn'),
+
 ]
 
