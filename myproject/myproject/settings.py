@@ -30,7 +30,11 @@ SECRET_KEY = 'django-insecure-&50v86qw!i0=7i)8nlf7vno-6b9p1ef)=pf7)w-h%butz1_inu
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['thuannguyen.pythonanywhere.com', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = [
+    'bethuandethuong.pythonanywhere.com',
+    'localhost',
+    '127.0.0.1'
+]
 
 MOCK_MOMO_REDIRECT_URL = 'http://your-frontend-url/payment/result'
 
@@ -69,11 +73,41 @@ INSTALLED_APPS = [
     # 'allauth.socialaccount.providers.google',
     # 'allauth.socialaccount.providers.github',
     
+
+    
     
 
 ]
 
+CORS_ALLOW_ALL_ORIGINS = True  # Trong môi trường development
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:19006",  # cho React Native Expo
+]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -112,15 +146,28 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+#Database trên PythonAnywhere
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'apartment_db',
-        'USER': 'root',
-        'PASSWORD': 'Admin@123',
-        'HOST': 'localhost', #port mặc định của local host
+        'NAME': 'bethuandethuong$thuan_apartments_db',
+        'USER': 'bethuandethuong',
+        'PASSWORD': 'thuan@04012004Ab',
+        'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com', #port mặc định của local host
+        'PORT': '',
     }
 }
+
+#Database local
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'apartment_db',
+#         'USER': 'root',
+#         'PASSWORD': 'Admin@123',
+#         'HOST': 'localhost', #port mặc định của local host
+#     }
+# }
 
 #Setting cho Cloudinary
 import cloudinary
@@ -213,5 +260,5 @@ MOCK_MOMO_IPN_URL = "http://nguyennguyen.pythonanywhere.com/bills/mock-momo/webh
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CLIENT_ID = 'nmfiua1CP6DB5tFtChl96dluStatcErfY07eKaI0'
-CLIENT_SECRET = 'DaOK74jAJVrto79YLYEEnRwuz2LcywOFdsgeM3TFFvt7fcLJiyRwxsm1f9IFZvxE09UnEjwsAaJiTp7krBsrjwmDjZRBX5KUqJfPGxeJNNStc8McReWNvdjXtcPVV5vx'
+CLIENT_ID = 'NkMjZTSBUvor7dOEN1AAeTvPkioq2ZoBQYqfqrTx'
+CLIENT_SECRET = 'cQq1QDZzBJOYi5pYitjQ2EMGGITqqaVJEVJrCSabQ6TrPMyBhqYPzUdJMHzWYeYAZNx1NuY1bCYWST3LlWoGA298EMwQAlMtEIehlWIlI5dNbcz6yjXNi16bDxbiuCZM'

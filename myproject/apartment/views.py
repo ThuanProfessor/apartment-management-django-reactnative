@@ -114,7 +114,8 @@ class UserViewSet(viewsets.ModelViewSet):
     pagination_class = paginators.ItemPagination
     parser_classes = [MultiPartParser, FormParser]
     
-    
+
+
     def get_queryset(self):
         
         if getattr(self, 'swagger_fake_view', False):
@@ -687,16 +688,12 @@ class LockerViewSet(viewsets.ModelViewSet):
             type='system'
         )
 
-    @action(detail=True, methods=['patch'])
-    def mark_received(self, request, pk=None):
+    def mark_as_received(self, request, pk=None):
         locker = self.get_object()
-        if locker.user != request.user and request.user.role != 'ADMIN':
-            raise permissions.PermissionDenied("Bạn không có quyền cập nhật tủ đồ này.")
         locker.status = 'received'
         locker.received_at = timezone.now()
         locker.save()
-        serializer = self.get_serializer(locker)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK)
 
 # Feedback ViewSet
 class FeedbackViewSet(viewsets.ModelViewSet):
@@ -746,6 +743,7 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         )
         serializer = self.get_serializer(feedback)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 # Survey ViewSet
 class SurveyViewSet(viewsets.ModelViewSet):
@@ -901,6 +899,64 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
     
 # PaymentAccount ViewSet
 class PaymentAccountViewSet(viewsets.ModelViewSet):
+    queryset = PaymentAccount.objects.filter(active=True)
+    serializer_class = serializers.PaymentAccountSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = paginators.ItemPagination
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+    @action(detail=False, methods=['get'])
+    def active_accounts(self, request):
+        accounts = self.get_queryset().filter(active=True)
+        serializer = self.get_serializer(accounts, many=True)
+        return Response(serializer.data)
+
+
+class UploadAvatarViewSet(viewsets.ViewSet):
+    parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=['post'])
+    def upload(self, request):
+        try:
+            if 'file' not in request.FILES:
+                return Response({'error': 'No file uploaded'}, status=400)
+                
+            file = request.FILES['file']
+            # Validate file type
+            if not file.content_type.startswith('image/'):
+                return Response({'error': 'File must be an image'}, status=400)
+                
+            # Upload to Cloudinary
+            result = cloudinary.uploader.upload(
+                file,
+                folder='avatars/',
+                transformation=[
+                    {'width': 200, 'height': 200, 'crop': 'fill'}
+                ]
+            )
+            
+            # Update user avatar
+            request.user.avatar = result['secure_url']
+            request.user.save()
+            
+            return Response({
+                'avatar_url': result['secure_url'],
+                'message': 'Avatar uploaded successfully'
+            })
+            
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=400)
     queryset = PaymentAccount.objects.filter(active=True)
     serializer_class = serializers.PaymentAccountSerializer
     permission_classes = [permissions.IsAuthenticated]
