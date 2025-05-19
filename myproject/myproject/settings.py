@@ -169,6 +169,13 @@ DATABASES = {
         'USER': 'root',
         'PASSWORD': 'Admin@123',
         'HOST': 'localhost', #port mặc định của local host
+
+        # 'NAME': 'coursedb1',
+        # 'USER': 'root',
+        # 'PASSWORD': '123456',
+        # 'HOST': '', #port mặc định của local host
+        # 'PORT': '',
+
     }
 }
 
@@ -270,6 +277,19 @@ VNPAY_CONFIG = {
     "vnp_ReturnUrl": os.getenv("VNP_RETURNURL"),
 }
 
+# VNPAY_CONFIG = {
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+VNPAY_CONFIG = {
+    "vnp_TmnCode": os.getenv("VNP_TMNCODE"),
+    "vnp_HashSecret": os.getenv("VNP_HASHSECRET"),
+    "vnp_Url": os.getenv("VNP_URL"),
+    "vnp_ReturnUrl": os.getenv("VNP_RETURNURL"),
+}
+
+
 MOCK_MOMO_REDIRECT_URL = "http://thuannguyen.pythonanywhere.com/bills/mock-momo/success/"
 MOCK_MOMO_IPN_URL = "http://nguyennguyen.pythonanywhere.com/bills/mock-momo/webhook/"
 
@@ -278,5 +298,10 @@ MOCK_MOMO_IPN_URL = "http://nguyennguyen.pythonanywhere.com/bills/mock-momo/webh
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CLIENT_ID = 'NkMjZTSBUvor7dOEN1AAeTvPkioq2ZoBQYqfqrTx'
-CLIENT_SECRET = 'cQq1QDZzBJOYi5pYitjQ2EMGGITqqaVJEVJrCSabQ6TrPMyBhqYPzUdJMHzWYeYAZNx1NuY1bCYWST3LlWoGA298EMwQAlMtEIehlWIlI5dNbcz6yjXNi16bDxbiuCZM'
+
+# CLIENT_ID = 'NkMjZTSBUvor7dOEN1AAeTvPkioq2ZoBQYqfqrTx'
+# CLIENT_SECRET = 'cQq1QDZzBJOYi5pYitjQ2EMGGITqqaVJEVJrCSabQ6TrPMyBhqYPzUdJMHzWYeYAZNx1NuY1bCYWST3LlWoGA298EMwQAlMtEIehlWIlI5dNbcz6yjXNi16bDxbiuCZM'
+
+CLIENT_ID = 'aPwlnbB1gdvRBos9vtEatNVEQWx8wMA4jbzAQKCc'
+CLIENT_SECRET = '6UK1kV2eeBuG788EOTJfgnBJVrPyZL2PO7LqarE08YPKRHa7zNNK2DHZbr5aL6LkywQNd0isjCM6FmMjxCZdoc10DFezBkwqgXDpDzvFJKXXg4V3avGJwgfAhHP1Rt3y'
+

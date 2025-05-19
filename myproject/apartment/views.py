@@ -454,7 +454,7 @@ class BillViewSet(viewsets.ModelViewSet):
             data = request.data
             transaction_id = data.get('transactionId')
             bill_id = data.get('billId')
-            result_code = data.get('resultCode', 0)  # 0: thành công, khác: thất bại
+            result_code = data.get('resultCode', 0) # 0: thành công, khác: thất bại
 
             # Tìm giao dịch
             payment = Payment.objects.filter(
@@ -922,7 +922,14 @@ class PaymentAccountViewSet(viewsets.ModelViewSet):
     pagination_class = paginators.ItemPagination
 
     def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
+        # Kiểm tra nếu là swagger_fake_view
+        if getattr(self, 'swagger_fake_view', False):
+            return PaymentAccount.objects.none()
+
+        query = self.queryset
+        if self.request.user.is_authenticated:
+            return query.filter(user=self.request.user)
+        return query.none()
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

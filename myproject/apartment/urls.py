@@ -21,6 +21,9 @@ router.register('payment-accounts', views.PaymentAccountViewSet)
 router.register('card-requests', views.CardRequestViewSet, basename='card-request')
 router.register('upload-avatar', views.UploadAvatarViewSet, basename='upload-avatar')
 
+# router.register('vnpay', views.VNPayViewSet, basename='vnpay')
+
+
 # router.register(r'users/(?P<user_id>\d+)/bills', views.BillViewSet, basename='user-bills')
 # router.register(r'users/(?P<user_id>\d+)/parking-cards', views.ParkingCardViewSet, basename='user-parking-cards')
 # router.register(r'users/(?P<user_id>\d+)/relative-cards', views.RelativeCardViewSet, basename='user-relative-cards')

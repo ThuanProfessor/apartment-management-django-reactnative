@@ -184,6 +184,7 @@ class PaymentAccount(BaseModel):
         ('Bank', 'Ngân hàng'),
     )
     
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPE_CHOICES, default='Bank')
     account_number = models.CharField(max_length=20, unique=True)
     account_name = models.CharField(max_length=50)
