@@ -184,6 +184,7 @@ class PaymentAccount(BaseModel):
         ('Bank', 'Ngân hàng'),
     )
     
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     account_type = models.CharField(max_length=20, choices=ACCOUNT_TYPE_CHOICES, default='Bank')
     account_number = models.CharField(max_length=20, unique=True)
     account_name = models.CharField(max_length=50)
@@ -224,7 +225,9 @@ class Payment(BaseModel):
      payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES)
      status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
      transaction_id = models.CharField(max_length=100, null=True, blank=True)
-     payment_url = models.URLField(null=True, blank=True)
+     # payment_url = models.URLField(null=True, blank=True)
+     payment_url = models.TextField(blank=True, null=True)
+
      payment_info = models.JSONField(null=True, blank=True)
      payment_date = models.DateTimeField(null=True, blank=True)
  
