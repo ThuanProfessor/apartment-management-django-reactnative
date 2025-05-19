@@ -29,12 +29,15 @@ SECRET_KEY = 'django-insecure-&50v86qw!i0=7i)8nlf7vno-6b9p1ef)=pf7)w-h%butz1_inu
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
+#
+#
+# ALLOWED_HOSTS = [
+#     'https://3e4f-2402-800-63b8-91cf-a8cd-6b46-ec92-8ec6.ngrok-free.app',
+#     'localhost',
+#     '127.0.0.1'
+# ]
+ALLOWED_HOSTS = ['*']
 
-ALLOWED_HOSTS = [
-    'bethuandethuong.pythonanywhere.com',
-    'localhost',
-    '127.0.0.1'
-]
 
 MOCK_MOMO_REDIRECT_URL = 'http://your-frontend-url/payment/result'
 
@@ -78,7 +81,7 @@ INSTALLED_APPS = [
     
 
 ]
-
+DEBUG = True
 CORS_ALLOW_ALL_ORIGINS = True  # Trong môi trường development
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
@@ -107,8 +110,8 @@ CORS_ALLOW_HEADERS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Thêm whitenoise middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -147,27 +150,27 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 #Database trên PythonAnywhere
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'bethuandethuong$thuan_apartments_db',
-        'USER': 'bethuandethuong',
-        'PASSWORD': 'thuan@04012004Ab',
-        'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com', #port mặc định của local host
-        'PORT': '',
-    }
-}
-
-#Database local
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'apartment_db',
+#         'NAME': 'coursedb1',
 #         'USER': 'root',
-#         'PASSWORD': 'Admin@123',
-#         'HOST': 'localhost', #port mặc định của local host
+#         'PASSWORD': '123456',
+#         'HOST': '', #port mặc định của local host
+#         'PORT': '',
 #     }
 # }
+
+#Database local
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'apartment_db',
+        'USER': 'root',
+        'PASSWORD': 'Admin@123',
+        'HOST': 'localhost', #port mặc định của local host
+    }
+}
 
 #Setting cho Cloudinary
 import cloudinary
@@ -248,15 +251,30 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Mock MoMo Configuration
+# Media files config
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+VNPAY_CONFIG = {
+    "vnp_TmnCode": os.getenv("VNP_TMNCODE"),
+    "vnp_HashSecret": os.getenv("VNP_HASHSECRET"),
+    "vnp_Url": os.getenv("VNP_URL"),
+    "vnp_ReturnUrl": os.getenv("VNP_RETURNURL"),
+}
+
 MOCK_MOMO_REDIRECT_URL = "http://thuannguyen.pythonanywhere.com/bills/mock-momo/success/"
 MOCK_MOMO_IPN_URL = "http://nguyennguyen.pythonanywhere.com/bills/mock-momo/webhook/"
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+# https://docs.djangoproject.com/en/5.1/ref/settings/#default-autos-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

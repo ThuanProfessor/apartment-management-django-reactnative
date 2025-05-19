@@ -1,8 +1,7 @@
-from django.db import router
 from django.urls import path, include
-from . import views
 from rest_framework.routers import DefaultRouter
-from rest_framework_nested import routers
+from . import views
+from apartment.views import PaymentView, PaymentReturnView, PaymentIPNView
 
 router = DefaultRouter()
 router.register('auth', views.AuthViewSet, basename='auth')
@@ -46,5 +45,9 @@ urlpatterns = [
     path('', include(router.urls)),
     # path('', include('user.urls')),
     # path('accounts/', include('allauth.urls'))
+    path('api/payment/create/', PaymentView.as_view(), name='payment-create'),
+    path('api/payment/return/', PaymentReturnView.as_view(), name='payment-return'),
+    path('api/payment/ipn/', PaymentIPNView.as_view(), name='payment-ipn'),
+
 ]
 
