@@ -6,7 +6,7 @@ from re import S, U
 import cloudinary
 from rest_framework.serializers import ModelSerializer
 from apartment.models import ChatMessage, Notification, PaymentAccount, User, Apartment, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult
-
+from django import forms
 from rest_framework import serializers
 
 class ApartmentSerializer(ModelSerializer):
@@ -103,12 +103,17 @@ class MockMomoPayment:
 
     
 class BillSerializer(ItemSerializer):
+    status_display = serializers.SerializerMethodField()
+
+    def get_status_display(self, obj):
+        return obj.get_status_display()
     apartment_number = serializers.CharField(source='apartment.number', read_only=True)
     user_name = serializers.CharField(source = 'user.username', read_only=True)
     class Meta:
         model = Bill
-        fields = ['id', 'user', 'user_name', 'apartment_number', 'bill_type', 'amount', 'description', 
-                 'payment_method', 'payment_proof', 'payment_transaction_id', 'status', 'due_date', 'created_date']
+        fields = ['id', 'user', 'user_name', 'apartment_number', 'bill_type', 'amount', 'description',
+                  'payment_method', 'payment_proof', 'payment_transaction_id', 'status', 'status_display',
+                  'due_date', 'created_date']
         
 
 class ParkingCardSerializer(ModelSerializer):
@@ -220,3 +225,21 @@ class CardRequestSerializer(serializers.ModelSerializer):
 #         model = UserSerializer.Meta.model
 #         fields = UserSerializer.Meta.fields + ['apartment', 'role', 'active', 'is_first_login']
         
+
+class PaymentRequestSerializer(serializers.Serializer):
+        bill_id = serializers.IntegerField()  # Thay vì subscription_id
+        bank_code = serializers.CharField(required=False, max_length=20)
+        language = serializers.CharField(default='vn', max_length=2)
+class PaymentResponseSerializer(serializers.Serializer):
+    vnp_TransactionNo = serializers.CharField()
+    vnp_Amount = serializers.IntegerField()
+    vnp_OrderInfo = serializers.CharField()
+    vnp_ResponseCode = serializers.CharField()
+    vnp_TransactionStatus = serializers.CharField()
+class PaymentForm(forms.Form):
+    order_id = forms.CharField(max_length=250)
+    order_type = forms.CharField(max_length=20)
+    amount = forms.IntegerField()
+    order_desc = forms.CharField(max_length=100)
+    bank_code = forms.CharField(max_length=20, required=False)
+    language = forms.CharField(max_length=2)

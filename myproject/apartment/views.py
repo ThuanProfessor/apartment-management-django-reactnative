@@ -12,12 +12,25 @@ from apartment.models import Apartment, CardRequest, User, RelativeCard, Bill, P
 from apartment import serializers, paginators
 from apartment.permissions import IsAdminOrSelf, IsAdminOnly, IsPasswordChanged, IsResidentOnly
 import logging
+from datetime import datetime
 from django.conf import settings
-logger = logging.getLogger(__name__)
-# from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from .models import Bill, Payment
+from django.shortcuts import render
+from .utils.vnpay_helper import VNPay, get_client_ip
+from rest_framework.permissions import AllowAny
+from .serializers import PaymentRequestSerializer
+from decimal import Decimal
 
+logger = logging.getLogger(__name__)
+from decimal import Decimal
+
+from .serializers import PaymentSerializer
 class AuthViewSet(viewsets.ViewSet):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser]
     
     @action(detail=False, methods=['post'])
@@ -195,22 +208,24 @@ class UserViewSet(viewsets.ModelViewSet):
     #         return self.get_paginated_response(serializer.data)
     #     serializer = serializers.BillSerializer(bills, many=True)
     #     return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
+
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def change_pass(self, request):
         user = request.user
+
         old_pass = request.data.get('old_password')
         new_pass = request.data.get('new_password')
-        
+
         if not user.check_password(old_pass):
             return Response({'error': 'Mật khẩu cũ không đúng'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         if not new_pass or len(new_pass) < 8:
             return Response(
                 {'error': 'Mật khẩu mới phải dài ít nhất 8 ký tự'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-            
+
         user.password = make_password(new_pass)
         user.is_first_login = False
         user.save()
@@ -291,9 +306,10 @@ class UserViewSet(viewsets.ModelViewSet):
 class BillViewSet(viewsets.ModelViewSet):
     queryset = Bill.objects.filter(active=True)
     serializer_class = serializers.BillSerializer
-    permission_classes = [IsAdminOrSelf, IsPasswordChanged]
-    pagination_class = paginators.ItemPagination
-    parser_classes = [MultiPartParser, FormParser]
+    # permission_classes = [IsAdminOrSelf, IsPasswordChanged]
+    permission_classes = [permissions.AllowAny]
+    # pagination_class = paginators.ItemPagination
+    # parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
         query = self.queryset
@@ -310,6 +326,7 @@ class BillViewSet(viewsets.ModelViewSet):
             query = query.filter(bill_type=bill_type)
         return query.order_by('-due_date')
 
+        return self.queryset.filter(user=user).order_by('-due_date')
     def perform_create(self, serializer):
         if self.request.user.role != 'ADMIN':
             raise permissions.PermissionDenied("Chỉ admin mới có thể tạo hóa đơn.")
@@ -897,8 +914,8 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
         message.save()
         serializer = self.get_serializer(message)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    
+
+
 # PaymentAccount ViewSet
 class PaymentAccountViewSet(viewsets.ModelViewSet):
     queryset = PaymentAccount.objects.filter(active=True)
@@ -922,9 +939,147 @@ class PaymentAccountViewSet(viewsets.ModelViewSet):
         if self.request.user.role != 'ADMIN':
             raise permissions.PermissionDenied("Chỉ admin mới có thể cập nhật tài khoản thanh toán.")
         serializer.save()
-        
+
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def active_accounts(self, request):
         accounts = self.queryset.filter(active=True)
         serializer = self.get_serializer(accounts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+class PaymentView(APIView):
+    def post(self, request):
+        serializer = PaymentRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            bill = Bill.objects.get(id=serializer.validated_data['bill_id'])
+            if bill.status == 'paid':
+                return Response({'error': 'Hóa đơn đã được thanh toán'}, status=status.HTTP_400_BAD_REQUEST)
+            elif bill.status == 'overdue':
+                return Response({'error': 'Hóa đơn đã quá hạn, không thể thanh toán'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            payment = Payment.objects.create(
+                user=request.user,
+                bill=bill,
+                amount=bill.amount,
+                payment_method='BANK',
+                status='PENDING'
+            )
+            print(settings.VNPAY_CONFIG['vnp_ReturnUrl'])
+
+            vnp = VNPay()
+            vnp.requestData = {
+                'vnp_Version': '2.1.0',
+                'vnp_Command': 'pay',
+                'vnp_TmnCode': settings.VNPAY_CONFIG['vnp_TmnCode'],
+                'vnp_Amount': int(bill.amount * 100),
+                'vnp_CurrCode': 'VND',
+                'vnp_TxnRef': str(payment.id),
+                'vnp_OrderInfo': f"Thanh toán hóa đơn {bill.id}",
+                'vnp_OrderType': 'billpayment',
+                'vnp_Locale': serializer.validated_data.get('language', 'vn'),
+                'vnp_CreateDate': datetime.now().strftime('%Y%m%d%H%M%S'),
+                'vnp_IpAddr': get_client_ip(request),
+                'vnp_ReturnUrl': settings.VNPAY_CONFIG['vnp_ReturnUrl']
+            }
+
+            if serializer.validated_data.get('bank_code'):
+                vnp.requestData['vnp_BankCode'] = serializer.validated_data['bank_code']
+
+            payment_url = vnp.get_payment_url()
+            print("DEBUG RETURN URL:", vnp.requestData['vnp_ReturnUrl'])
+            payment.payment_url = payment_url
+            payment.save()
+
+            return Response({
+                'payment_url': payment_url,
+                'payment_id': payment.id
+            })
+
+        except Bill.DoesNotExist:
+            return Response({'error': 'Không tìm thấy hóa đơn'}, status=status.HTTP_404_NOT_FOUND)
+
+class PaymentReturnView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        input_data = request.GET
+        vnp = VNPay()
+        vnp.responseData = input_data.dict()
+
+        if not vnp.validate_response():
+            return Response({
+                "result": "error",
+                "message": "Sai checksum",
+                "data": vnp.responseData
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            payment_id = vnp.responseData.get('vnp_TxnRef')
+            transaction_no = vnp.responseData.get('vnp_TransactionNo')
+            response_code = vnp.responseData.get('vnp_ResponseCode')
+            amount = Decimal(vnp.responseData.get('vnp_Amount')) / 100
+
+            payment = get_object_or_404(Payment, id=payment_id)
+            if payment.amount != amount:
+                return Response({"error": "Số tiền không khớp"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if response_code == '00':
+                payment.status = 'SUCCESS'
+                payment.payment_date = timezone.now()
+                payment.transaction_id = transaction_no
+                payment.bill.status = 'paid'
+                payment.bill.payment_transaction_id = transaction_no
+                payment.bill.payment_method = 'online'
+                payment.bill.save()
+            else:
+                payment.status = 'FAILED'
+
+            payment.save()
+
+            return Response({"message": "Xử lý thanh toán thành công", "status": payment.status})
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class PaymentIPNView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        input_data = request.GET
+        vnp = VNPay()
+        vnp.responseData = input_data.dict()
+
+        if not vnp.validate_response():
+            return Response({'RspCode': '97', 'Message': 'Invalid Signature'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            payment_id = vnp.responseData.get('vnp_TxnRef')
+            transaction_no = vnp.responseData.get('vnp_TransactionNo')
+            response_code = vnp.responseData.get('vnp_ResponseCode')
+            amount = int(vnp.responseData.get('vnp_Amount')) / 100
+
+            payment = get_object_or_404(Payment, id=payment_id)
+            if str(payment.amount) != str(amount):
+                return Response({'RspCode': '04', 'Message': 'Invalid Amount'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if payment.status != 'PENDING':
+                return Response({'RspCode': '02', 'Message': 'Order Already Confirmed'}, status=status.HTTP_200_OK)
+
+            if response_code == '00':
+                payment.status = 'SUCCESS'
+                payment.payment_date = timezone.now()
+                payment.transaction_id = transaction_no
+                payment.bill.status = 'paid'
+                payment.bill.payment_transaction_id = transaction_no
+                payment.bill.payment_method = 'online'
+                payment.bill.save()
+            else:
+                payment.status = 'FAILED'
+
+            payment.save()
+
+            return Response({'RspCode': '00', 'Message': 'Confirm Success'}, status=status.HTTP_200_OK)
+
+        except Exception:
+            return Response({'RspCode': '99', 'Message': 'Unknown Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
