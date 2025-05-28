@@ -24,7 +24,7 @@ from .utils.vnpay_helper import VNPay, get_client_ip
 from rest_framework.permissions import AllowAny
 from .serializers import PaymentRequestSerializer
 from decimal import Decimal
-
+from apartment.utils.sms_helper import send_sms
 logger = logging.getLogger(__name__)
 from decimal import Decimal
 
@@ -335,18 +335,28 @@ class BillViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'])
     def upload_proof(self, request, pk=None):
         bill = self.get_object()
+
         if bill.status != 'pending':
             raise permissions.PermissionDenied("Hóa đơn không ở trạng thái chờ thanh toán.")
+
         if bill.user != request.user and request.user.role != 'ADMIN':
             raise permissions.PermissionDenied("Bạn không có quyền cập nhật hóa đơn này.")
+
         payment_proof = request.FILES.get('payment_proof')
         if payment_proof:
             upload_result = cloudinary.uploader.upload(payment_proof, folder='bills/')
             bill.payment_proof = upload_result['public_id']
+
         bill.payment_transaction_id = request.data.get('payment_transaction_id')
-        bill.status = 'pending'
+
+        # ✅ Cập nhật payment_method nếu client gửi
+        new_method = request.data.get('payment_method')
+        if new_method in ['momo_tranfer', 'bank_transfer']:
+            bill.payment_method = new_method
+
+        bill.status = 'submitted'
         bill.save()
-        
+
         Payment.objects.create(
             user=bill.user,
             bill=bill,
@@ -355,7 +365,7 @@ class BillViewSet(viewsets.ModelViewSet):
             status='PENDING',
             transaction_id=bill.payment_transaction_id
         )
-        
+
         serializer = self.get_serializer(bill)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -681,8 +691,9 @@ class RelativeCardViewSet(viewsets.ModelViewSet):
 class LockerViewSet(viewsets.ModelViewSet):
     queryset = Locker.objects.filter(active=True)
     serializer_class = serializers.LockerSerializer
+    # permission_classes = [AllowAny]
     permission_classes = [IsAdminOrSelf, IsPasswordChanged]
-    pagination_class = paginators.ItemPagination
+    # pagination_class = paginators.ItemPagination
 
     def get_queryset(self):
         query = self.queryset
@@ -696,13 +707,17 @@ class LockerViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         if self.request.user.role != 'ADMIN':
             raise permissions.PermissionDenied("Chỉ admin mới có thể tạo tủ đồ.")
+
         locker = serializer.save()
+
         Notification.objects.create(
             user=locker.user,
             title='Hàng mới trong tủ đồ',
-            content=f'Bạn có hàng mới trong tủ đồ: {locker.description}.',
+            content=f'Bạn có hàng mới trong tủ đồ: {locker.item_description}.',
             type='system'
         )
+
+
 
     @action(detail=True, methods=['patch'])
     def mark_received(self, request, pk=None):
@@ -1083,3 +1098,5 @@ class PaymentIPNView(APIView):
 
         except Exception:
             return Response({'RspCode': '99', 'Message': 'Unknown Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+

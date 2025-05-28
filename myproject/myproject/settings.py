@@ -252,6 +252,10 @@ VNPAY_CONFIG = {
     "vnp_Url": os.getenv("VNP_URL"),
     "vnp_ReturnUrl": os.getenv("VNP_RETURNURL"),
 }
+TWILIO_ACCOUNT_SID = 'ACe5ceccecadf9bb7905c481db8c24c5bf'
+TWILIO_AUTH_TOKEN = 'bea7072084285a5446b71326d05b5de9'
+TWILIO_PHONE_NUMBER = '+19786432877'
+
 
 MOCK_MOMO_REDIRECT_URL = "http://thuannguyen.pythonanywhere.com/bills/mock-momo/success/"
 MOCK_MOMO_IPN_URL = "http://nguyennguyen.pythonanywhere.com/bills/mock-momo/webhook/"
