@@ -718,14 +718,12 @@ class LockerViewSet(viewsets.ModelViewSet):
             type='system'
         )
 
-<<<<<<< HEAD
-    def mark_as_received(self, request, pk=None):
-=======
+
 
 
     @action(detail=True, methods=['patch'])
     def mark_received(self, request, pk=None):
->>>>>>> a941503cec4be1bcae3cfc100c5ccfd6a8e54f67
+
         locker = self.get_object()
         locker.status = 'received'
         locker.received_at = timezone.now()
