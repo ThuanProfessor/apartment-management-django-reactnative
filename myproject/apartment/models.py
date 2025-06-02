@@ -68,6 +68,7 @@ class Bill(BaseModel):
     )
     STATUS_CHOICE = (
         ('pending', 'Chờ thanh toán'),
+        ('submitted', 'Đã gửi minh chứng'),
         ('paid', 'Đã thanh toán'),
         ('overdue', 'Quá hạn'),
     )
@@ -111,7 +112,7 @@ class Locker(BaseModel):
     tracking_code = models.CharField(max_length=20, unique=True, null=True, blank=True)
     status = models.CharField(max_length=10, choices = STATUS_CHOICE, default='pending')
     received_at = models.DateTimeField(null=True, blank=True)
-
+    image = CloudinaryField('image', null=True, blank=True)
     def __str__(self):
         return f"Đồ: {self.item_description or 'Không có mô tả'} - {self.user.username}"
     
