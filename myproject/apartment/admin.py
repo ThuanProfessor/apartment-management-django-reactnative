@@ -111,16 +111,17 @@ class FeedbackAdmin(admin.ModelAdmin):
 
 
 class LockerAdmin(admin.ModelAdmin):
-    list_display = ['user', 'item_description', 'tracking_code', 'status', 'received_at']
-    search_fields = ['user', 'item_description', 'tracking_code', 'status']
-    list_filter = ['user', 'status']
+    list_display = ['user', 'item_description', 'tracking_code', 'status', 'received_at', 'image_view_locker']
+    search_fields = ['user__username', 'item_description', 'tracking_code']
+    list_filter = ['status']
     readonly_fields = ['image_view_locker']
-    
-    def image_view_locker(self, locker):
-        if locker.tracking_code:
-            return mark_safe(f"<img src='/static/{locker.tracking_code.name}' width='100' />")
+
+    def image_view_locker(self, obj):
+        if obj.image:
+            return mark_safe(f"<img src='{obj.image.url}' width='150' />")
         return "Không có ảnh"
 
+    image_view_locker.short_description = "Ảnh tủ đồ"
 
 class SurveyAdmin(admin.ModelAdmin):
     list_display = ['id', 'title', 'created_date', 'updated_date', 'created_by']

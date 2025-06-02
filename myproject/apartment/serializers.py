@@ -135,12 +135,20 @@ class RelativeCardSerializer(serializers.ModelSerializer):
         
 class LockerSerializer(serializers.ModelSerializer):
     apartment_number = serializers.CharField(source='user.apartment.number', read_only=True)
-    user_name = serializers.CharField(source = 'user.username', read_only=True)
-    
+    user_name = serializers.CharField(source='user.username', read_only=True)
+
     class Meta:
         model = Locker
-        fields = ['id', 'user', 'user_name', 'apartment_number', 'item_description', 'tracking_code', 
-                 'status', 'received_at', 'created_date']
+        fields = [
+            'id', 'user', 'user_name', 'apartment_number', 'item_description',
+            'tracking_code', 'status', 'received_at', 'created_date', 'image'
+        ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.image and not str(instance.image).startswith("http"):
+            data['image'] = f"https://res.cloudinary.com/dg5ts9slf/{instance.image}"
+        return data
 
 
 class FeedbackSerializer(ItemSerializer):

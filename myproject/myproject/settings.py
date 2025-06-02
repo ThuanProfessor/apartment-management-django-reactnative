@@ -159,23 +159,14 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 #         'HOST': '', #port mặc định của local host
 #         'PORT': '',
 #     }
-# }
-
-#Database local
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'apartment_db',
-        'USER': 'root',
-        'PASSWORD': 'Admin@123',
-        'HOST': 'localhost', #port mặc định của local host
-
-        # 'NAME': 'coursedb1',
-        # 'USER': 'root',
-        # 'PASSWORD': '123456',
-        # 'HOST': '', #port mặc định của local host
-        # 'PORT': '',
-
+        'NAME': 'bethuandethuong$thuan_apartments_db',
+        'USER': 'bethuandethuong',
+        'PASSWORD': 'thuan@04012004Ab',
+        'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com',
+        'PORT': '',
     }
 }
 
@@ -276,6 +267,10 @@ VNPAY_CONFIG = {
     "vnp_Url": os.getenv("VNP_URL"),
     "vnp_ReturnUrl": os.getenv("VNP_RETURNURL"),
 }
+TWILIO_ACCOUNT_SID = 'ACe5ceccecadf9bb7905c481db8c24c5bf'
+TWILIO_AUTH_TOKEN = 'bea7072084285a5446b71326d05b5de9'
+TWILIO_PHONE_NUMBER = '+19786432877'
+
 
 # VNPAY_CONFIG = {
 import os
