@@ -1,6 +1,6 @@
 import time
 from rest_framework import serializers
-from apartment.models import ChatMessage, User, Apartment, PaymentAccount, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult, Payment, CardRequest
+from .models import Apartment, User, Bill, Feedback, Survey, SurveyResult, Notification, ChatMessage, PaymentAccount, Payment, CardRequest
 from dataclasses import fields
 from re import S, U
 import cloudinary
@@ -215,11 +215,9 @@ class PaymentSerializer(serializers.ModelSerializer):
         
 
 class CardRequestSerializer(serializers.ModelSerializer):
-    user_name = serializers.CharField(source='user.username', read_only=True)
-    
     class Meta:
         model = CardRequest
-        fields = ['id', 'user', 'user_name', 'type', 'name', 'relationship', 'status', 'created_date']
+        fields = '__all__'
         read_only_fields = ['user', 'status', 'created_date']
 
     def validate(self, data):

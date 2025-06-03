@@ -196,16 +196,22 @@ cloudinary.config(
 )
 
 #react native gọi api login bằng json
-OAUTH2_PROVIDER = { 'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.OAuthLibCore' }
+OAUTH2_PROVIDER = {
+    'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.OAuthLibCore',
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 36000,  # Thời gian hết hạn token
+}
 
-CLIENT_ID = 'c81OcWdfTtyKMGtnTdDbbmRrmfjARgFGphcvXQwy'
-CLIENT_SECRET = 'yHyrcPp7LfKC3dI4pfh1A3bopWltJ84gGDRHCDNwsUpnzM2V4hdNB79qoqa5tkNkUPnSTBw4Br1zRFqs3l2LaUdwTQp4tzaDa00l4BUNrJXdlQHXjRBfjYZjioKBxKMX'
+CLIENT_ID = '3RmrCK0lxzpRS8E877xpVwfwq3LahldYvHnw3X6x'
+CLIENT_SECRET = 'Z2kPsxPENT0qo8zUSXTJjhTtplJw3glH98BnB13FcxHOk92AmgRK5BeG0Zk5R6qRs6peFcX4JuS8kOfrlEB1BPCVGf363XALUEMrnx4ppfa0SrdZk0fOf3Vmrm8HAJlH'
     
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-    'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
-    'rest_framework.authentication.BasicAuthentication',
-    )
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
 }
 
 #Xác thực đăng nhập bằng social account

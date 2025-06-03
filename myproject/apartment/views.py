@@ -8,9 +8,12 @@ from django.db.models import Q
 from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 import cloudinary.uploader
-from apartment.models import Apartment, CardRequest, User, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult, PaymentAccount, Notification, ChatMessage, Payment
-from apartment import serializers, paginators
-from apartment.permissions import IsAdminOrSelf, IsAdminOnly, IsPasswordChanged, IsResidentOnly
+from .models import Apartment, CardRequest, User, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult, PaymentAccount, Notification, ChatMessage, Payment
+from .serializers import PaymentRequestSerializer
+from .permissions import IsAdminOrSelf, IsAdminOnly, IsPasswordChanged, IsResidentOnly
+from .utils.vnpay_helper import VNPay, get_client_ip
+from .utils.sms_helper import send_sms
+from . import serializers, paginators
 import logging
 from datetime import datetime
 from django.conf import settings
@@ -20,37 +23,41 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from .models import Bill, Payment
 from django.shortcuts import render
-from .utils.vnpay_helper import VNPay, get_client_ip
-from rest_framework.permissions import AllowAny
-from .serializers import PaymentRequestSerializer
 from decimal import Decimal
-from apartment.utils.sms_helper import send_sms
 logger = logging.getLogger(__name__)
 from decimal import Decimal
 
 from .serializers import PaymentSerializer
+from rest_framework.permissions import AllowAny  # Thêm dòng này để import AllowAny
 class AuthViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]
-    
+
     @action(detail=False, methods=['post'])
     def login(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
+
+        if not username or not password:
+            return Response({
+                'error': 'Tên đăng nhập và mật khẩu không được để trống'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         user = authenticate(request, username=username, password=password)
-        
+
         if user:
-            if user.is_locked:  # Sửa từ active sang is_locked
+            if user.is_locked:
                 return Response({
                     'error': 'Tài khoản đã bị khóa',
                     'reason': user.lock_reason
                 }, status=status.HTTP_400_BAD_REQUEST)
+
             login(request, user)
             serializer = serializers.UserSerializer(user)
-            return Response({'user': serializer.data}, status=status.HTTP_200_OK)
-        
-        return Response({'error': 'Tên đăng nhập hoặc mật khẩu không đúng'}, 
-                       status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response({
+            'error': 'Tên đăng nhập hoặc mật khẩu không đúng'
+        }, status=status.HTTP_400_BAD_REQUEST)
     
     
 class ApartmentViewSet(viewsets.ModelViewSet):
