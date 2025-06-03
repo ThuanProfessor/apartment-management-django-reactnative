@@ -774,15 +774,8 @@ class SurveyViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         query = self.queryset
-        choice = self.request.query_params.get('choice')
-        if choice:
-            query = query.filter(choice=choice)
         now = timezone.now()
-        active = self.request.query_params.get('active')
-        if active == 'true':
-            query = query.filter(start_date__lte=now, end_date__gte=now)
-        elif active == 'false':
-            query = query.filter(Q(end_date__lt=now) | Q(start_date__gt=now))
+        query = query.filter(start_date__lte=now, end_date__gte=now)
         return query.order_by('-start_date')
 
     def perform_create(self, serializer):

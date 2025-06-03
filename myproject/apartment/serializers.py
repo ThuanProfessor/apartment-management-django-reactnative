@@ -8,6 +8,7 @@ from rest_framework.serializers import ModelSerializer
 from apartment.models import ChatMessage, Notification, PaymentAccount, User, Apartment, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult
 from django import forms
 from rest_framework import serializers
+from django.utils import timezone
 
 class ApartmentSerializer(ModelSerializer):
     class Meta:
@@ -161,13 +162,18 @@ class FeedbackSerializer(ItemSerializer):
         
         
 class SurveySerializer(serializers.ModelSerializer):
+    is_active = serializers.SerializerMethodField()
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
     
     class Meta:
         model = Survey
         fields = ['id', 'title', 'choice', 'description', 'created_by', 'created_by_name', 
-                 'start_date', 'end_date', 'active', 'created_date']
+                 'start_date', 'end_date', 'active', 'created_date', 'is_active']
 
+    def get_is_active(self, obj):
+        now = timezone.now()
+        return obj.start_date <= now <= obj.end_date
+                
 
 class SurveyResultSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source='user.username', read_only=True)
