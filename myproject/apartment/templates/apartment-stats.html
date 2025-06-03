@@ -1,12 +1,11 @@
-{% extends "admin/base_site.html" %} {% load i18n static %} {% block extrastyle
-%}
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
 
-<link
-  rel="stylesheet"
-  href="{% static 'apartment/css/apartment-stats.css' %}"
-/>
+{% block extrastyle %}
+<link rel="stylesheet" href="{% static 'apartment/css/apartment-stats.css' %}" />
+{% endblock %}
 
-{% endblock %} {% block content %}
+{% block content %}
 <div class="stats-container">
   <h2>Apartment Statistics</h2>
 
@@ -59,7 +58,6 @@
     data.push({{ s.apm_count }});
     labels.push('{{ s.username }}');
   {% endfor %}
-
 
   window.onload = function () {
     const ctx = document.getElementById("myChart");

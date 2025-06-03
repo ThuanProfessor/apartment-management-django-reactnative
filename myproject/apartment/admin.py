@@ -2,9 +2,11 @@ from string import Template
 from django.contrib import admin
 from apartment.models import CardRequest, User, Apartment, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult
 from django.utils.safestring import mark_safe
-from django.db.models import Count
 from django.template.response import TemplateResponse
-
+from django.db.models.functions import TruncMonth
+from django.db.models import Count, Sum
+from django.utils.timezone import now, timedelta
+from apartment.models import Apartment, User, Bill, RelativeCard, ParkingCard, Feedback
 from django import forms
 from ckeditor_uploader.widgets import CKEditorUploadingWidget
 from django.urls import path
@@ -112,18 +114,94 @@ class MyAdminSite(admin.AdminSite):
     index_title = 'Welcome to Apartment Management Admin'
     # login_template = 'admin/custom_login.html'
     # logout_template = 'admin/custom_logout.html'
-    
+
     def get_urls(self):
-        return [path('apartment-stats/', self.apartment_stats)] + super().get_urls()
-    
+        return [
+            path('apartment-stats/', self.admin_view(self.apartment_stats)),
+            path('report-dashboard/', self.admin_view(self.report_dashboard)),
+        ] + super().get_urls()
+
     def apartment_stats(self, request):
     # Đếm số lượng căn hộ cho mỗi user
         stats = User.objects.annotate(apm_count=Count('apartment__id')).values('id', 'username', 'apm_count')
         total_apartments = Apartment.objects.count()  # Tổng số căn hộ
         
-        return TemplateResponse(request, 'admin/apartment-stats.html', {
+        return TemplateResponse(request, 'apartment-stats.html', {
             'stats': stats,
             'total_apartments': total_apartments  # Thêm tổng số
+        })
+
+    def report_dashboard(self, request):
+        total_apartments = Apartment.objects.count()
+        empty_apartments = Apartment.objects.filter(status='available').count()
+        occupied_apartments = total_apartments - empty_apartments
+
+        total_users = User.objects.filter(role='RESIDENT').count()
+        locked_users = User.objects.filter(role='RESIDENT', is_locked=True).count()
+        new_users = User.objects.filter(role='RESIDENT', created_date__gte=now() - timedelta(days=30)).count()
+
+        total_bills = Bill.objects.count()
+        paid_bills = Bill.objects.filter(status='paid').count()
+        pending_bills = Bill.objects.filter(status='pending').count()
+        overdue_bills = Bill.objects.filter(status='overdue').count()
+        total_revenue = Bill.objects.filter(status='paid').aggregate(Sum('amount'))['amount__sum'] or 0
+
+        total_parking_cards = ParkingCard.objects.count()
+        total_relative_cards = RelativeCard.objects.count()
+
+        feedback_stats = Feedback.objects.values('status').annotate(count=Count('id'))
+        selected_month = int(request.GET.get('month', now().month))
+        # Doanh thu theo tháng trong năm hiện tại
+        bills_by_month = (
+            Bill.objects.filter(status='paid', created_date__year=now().year)
+            .annotate(month=TruncMonth('created_date'))
+            .values('month')
+            .annotate(total=Sum('amount'))
+            .order_by('month')
+        )
+        fees_by_type = (
+            Bill.objects.filter(
+                status='paid',
+                created_date__year=now().year,
+                created_date__month=selected_month
+            )
+            .values('bill_type')
+            .annotate(total=Sum('amount'))
+        )
+
+        fee_labels = ['Phí quản lý', 'Phí gửi xe', 'Phí dịch vụ']
+        fee_types = ['management_fee', 'parking_fee', 'service_fee']
+        fee_data = []
+
+        fee_map = {f['bill_type']: float(f['total']) for f in fees_by_type}
+        for key in fee_types:
+            fee_data.append(fee_map.get(key, 0))
+
+        months = [(i, now().replace(month=i).strftime('%B')) for i in range(1, 13)]
+        revenue_labels = [b['month'].strftime('%B') for b in bills_by_month]
+        revenue_data = [float(b['total']) for b in bills_by_month]
+
+        return TemplateResponse(request, 'admin/report-dashboard.html', {
+            'total_apartments': total_apartments,
+            'empty_apartments': empty_apartments,
+            'occupied_apartments': occupied_apartments,
+            'total_users': total_users,
+            'locked_users': locked_users,
+            'new_users': new_users,
+            'total_bills': total_bills,
+            'paid_bills': paid_bills,
+            'pending_bills': pending_bills,
+            'overdue_bills': overdue_bills,
+            'total_revenue': total_revenue,
+            'total_parking_cards': total_parking_cards,
+            'total_relative_cards': total_relative_cards,
+            'feedback_stats': feedback_stats,
+            'revenue_labels': revenue_labels,
+            'revenue_data': revenue_data,
+            'fee_labels': fee_labels,
+            'fee_data': fee_data,
+            'selected_month': selected_month,
+            'months': months,
         })
         
         

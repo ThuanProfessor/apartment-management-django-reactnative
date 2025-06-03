@@ -1,0 +1,114 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+<style>
+.stat-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+.stat-box {
+    background: #f0f0f0;
+    padding: 1rem;
+    border-radius: 8px;
+    width: 250px;
+}
+.stat-box h3 {
+    margin: 0;
+    font-size: 18px;
+}
+.chart-container {
+    width: 300px;
+    height: 300px;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<h1>Báo cáo thống kê tổng quan</h1>
+
+<div style="display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start;">
+    <!-- Phần trái: Thống kê -->
+    <div style="flex: 3;">
+        <div class="stat-grid">
+            <div class="stat-box"><h3>Tổng căn hộ</h3><p>{{ total_apartments }}</p></div>
+            <div class="stat-box"><h3>Còn trống</h3><p>{{ empty_apartments }}</p></div>
+            <div class="stat-box"><h3>Đã cho thuê</h3><p>{{ occupied_apartments }}</p></div>
+            <div class="stat-box"><h3>Tổng cư dân</h3><p>{{ total_users }}</p></div>
+            <div class="stat-box"><h3>Bị khóa</h3><p>{{ locked_users }}</p></div>
+            <div class="stat-box"><h3>Cư dân mới (30 ngày)</h3><p>{{ new_users }}</p></div>
+            <div class="stat-box"><h3>Tổng hóa đơn</h3><p>{{ total_bills }}</p></div>
+            <div class="stat-box"><h3>Đã thanh toán</h3><p>{{ paid_bills }}</p></div>
+            <div class="stat-box"><h3>Chờ thanh toán</h3><p>{{ pending_bills }}</p></div>
+            <div class="stat-box"><h3>Quá hạn</h3><p>{{ overdue_bills }}</p></div>
+            <div class="stat-box"><h3>Tổng doanh thu</h3><p>{{ total_revenue|floatformat:0 }} đ</p></div>
+            <div class="stat-box"><h3>Thẻ xe</h3><p>{{ total_parking_cards }}</p></div>
+            <div class="stat-box"><h3>Thẻ thân nhân</h3><p>{{ total_relative_cards }}</p></div>
+        </div>
+
+        <h2>Thống kê phản hồi</h2>
+        <table class="adminstats table">
+            <thead>
+                <tr><th>Trạng thái</th><th>Số lượng</th></tr>
+            </thead>
+            <tbody>
+                {% for fb in feedback_stats %}
+                <tr><td>{{ fb.status }}</td><td>{{ fb.count }}</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Phần phải: Biểu đồ -->
+    <div style="flex: 1; min-width: 250px;">
+        <h2>Biểu đồ theo loại phí trong tháng</h2>
+
+        <form method="get" style="margin-bottom: 1rem;">
+            <label>Chọn tháng:</label>
+            <select name="month" onchange="this.form.submit()">
+                {% for num, label in months %}
+                <option value="{{ num }}" {% if num == selected_month %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+
+        <div class="chart-container">
+            <canvas id="feeChart" width="300" height="300"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+const feeChart = new Chart(document.getElementById("feeChart"), {
+    type: 'bar',
+    data: {
+        labels: {{ fee_labels|safe }},
+        datasets: [{
+            label: 'Tổng tiền (VNĐ)',
+            data: {{ fee_data|safe }},
+            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56'],
+            borderColor: ['#FF6384', '#36A2EB', '#FFCE56'],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: false,  // << KHÔNG responsive để giữ kích thước cố định
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return value.toLocaleString('vi-VN') + ' đ';
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
