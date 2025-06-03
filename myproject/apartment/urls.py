@@ -11,7 +11,7 @@ router.register('bills', views.BillViewSet)
 router.register('parking-cards', views.ParkingCardViewSet)
 router.register('card-requests', views.CardRequestViewSet)
 router.register('relative-cards', views.RelativeCardViewSet)
-router.register('lockers', views.LockerViewSet)
+router.register('lockers', views.LockerViewSet, basename='locker')
 router.register('feedbacks', views.FeedbackViewSet)
 router.register('surveys', views.SurveyViewSet)
 router.register('survey-results', views.SurveyResultViewSet)
@@ -51,6 +51,6 @@ urlpatterns = [
     path('api/payment/create/', PaymentView.as_view(), name='payment-create'),
     path('api/payment/return/', PaymentReturnView.as_view(), name='payment-return'),
     path('api/payment/ipn/', PaymentIPNView.as_view(), name='payment-ipn'),
-
+    path('api/apartment/', include(router.urls)),
 ]
 

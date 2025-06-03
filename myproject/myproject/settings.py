@@ -36,7 +36,7 @@ DEBUG = False
 #     'localhost',
 #     '127.0.0.1'
 # ]
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*', 'localhost', '127.0.0.1', '.ngrok-free.app']
 
 
 MOCK_MOMO_REDIRECT_URL = 'http://your-frontend-url/payment/result'
@@ -82,10 +82,21 @@ INSTALLED_APPS = [
 
 ]
 DEBUG = True
-CORS_ALLOW_ALL_ORIGINS = True  # Trong môi trường development
+
+# CORS settings
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_ALLOW_ALL = True
+
+# If you want to be more specific with origins:
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "http://localhost:19006",  # cho React Native Expo
+    "http://localhost:19006",
+    "exp://localhost:19000",  # For Expo development
+    "http://localhost",
+    "http://127.0.0.1",
+    "https://*.ngrok-free.app",
+    "https://*.ngrok.io",
 ]
 
 CORS_ALLOW_METHODS = [
@@ -150,25 +161,26 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 #Database trên PythonAnywhere
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'coursedb1',
-#         'USER': 'root',
-#         'PASSWORD': '123456',
-#         'HOST': '', #port mặc định của local host
-#         'PORT': '',
-#     }
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'bethuandethuong$thuan_apartments_db',
-        'USER': 'bethuandethuong',
-        'PASSWORD': 'thuan@04012004Ab',
-        'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com',
+        'NAME': 'apartment_db',
+        'USER': 'root',
+        'PASSWORD': 'Admin@123',
+        'HOST': '', #port mặc định của local host
         'PORT': '',
     }
 }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'bethuandethuong$thuan_apartments_db',
+#         'USER': 'bethuandethuong',
+#         'PASSWORD': 'thuan@04012004Ab',
+#         'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com',
+#         'PORT': '',
+#     }
+# }
 
 #Setting cho Cloudinary
 import cloudinary
@@ -297,6 +309,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CLIENT_ID = 'NkMjZTSBUvor7dOEN1AAeTvPkioq2ZoBQYqfqrTx'
 # CLIENT_SECRET = 'cQq1QDZzBJOYi5pYitjQ2EMGGITqqaVJEVJrCSabQ6TrPMyBhqYPzUdJMHzWYeYAZNx1NuY1bCYWST3LlWoGA298EMwQAlMtEIehlWIlI5dNbcz6yjXNi16bDxbiuCZM'
 
-CLIENT_ID = 'aPwlnbB1gdvRBos9vtEatNVEQWx8wMA4jbzAQKCc'
-CLIENT_SECRET = '6UK1kV2eeBuG788EOTJfgnBJVrPyZL2PO7LqarE08YPKRHa7zNNK2DHZbr5aL6LkywQNd0isjCM6FmMjxCZdoc10DFezBkwqgXDpDzvFJKXXg4V3avGJwgfAhHP1Rt3y'
+CLIENT_ID = 'PZFzK1dtx7zrnoPCbJzxFZTJzSeG06tPf1nbl20f'
+CLIENT_SECRET = 'weMx3lDBNBcVgTHPQvlKlOy0bYpieeTBjDXVJBN8NfWXPVMFSv2Z8bRGd96aVqz0zTcGHhvh4vt9YZblo6pab9jxhgXI0hGn3R0yDngHEYB84c4I6rIThdVWBfO5niwO'
 

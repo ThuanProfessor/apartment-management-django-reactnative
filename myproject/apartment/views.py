@@ -690,45 +690,23 @@ class RelativeCardViewSet(viewsets.ModelViewSet):
 
 # Locker ViewSet
 class LockerViewSet(viewsets.ModelViewSet):
-    queryset = Locker.objects.filter(active=True)
     serializer_class = serializers.LockerSerializer
-    # permission_classes = [AllowAny]
-    permission_classes = [IsAdminOrSelf, IsPasswordChanged]
-    # pagination_class = paginators.ItemPagination
-
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = Locker.objects.all()  # Thêm queryset mặc định
+    
     def get_queryset(self):
-        query = self.queryset
-        user_id = self.kwargs.get('user_id') or self.request.user.id
-        query = query.filter(user_id=user_id)
-        status_param = self.request.query_params.get('status')
-        if status_param:
-            query = query.filter(status=status_param)
-        return query.order_by('-created_date')
-
+        return Locker.objects.filter(user=self.request.user)
+    
     def perform_create(self, serializer):
-        if self.request.user.role != 'ADMIN':
-            raise permissions.PermissionDenied("Chỉ admin mới có thể tạo tủ đồ.")
+        serializer.save(user=self.request.user)
 
-        locker = serializer.save()
-
-        Notification.objects.create(
-            user=locker.user,
-            title='Hàng mới trong tủ đồ',
-            content=f'Bạn có hàng mới trong tủ đồ: {locker.item_description}.',
-            type='system'
-        )
-
-
-
-
-    @action(detail=True, methods=['patch'])
-    def mark_received(self, request, pk=None):
-
-        locker = self.get_object()
-        locker.status = 'received'
-        locker.received_at = timezone.now()
-        locker.save()
-        return Response(status=status.HTTP_200_OK)
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.status == 'pending' and request.data.get('status') == 'received':
+            instance.status = 'received'
+            instance.save()
+            return Response({'status': 'success'})
+        return Response({'status': 'error', 'message': 'Invalid status change'}, status=400)
 
 # Feedback ViewSet
 class FeedbackViewSet(viewsets.ModelViewSet):
