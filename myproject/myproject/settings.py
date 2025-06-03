@@ -110,8 +110,8 @@ CORS_ALLOW_HEADERS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Thêm whitenoise middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -149,13 +149,23 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+#Database trên PythonAnywhere
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'coursedb1',
+#         'USER': 'root',
+#         'PASSWORD': '123456',
+#         'HOST': '', #port mặc định của local host
+#         'PORT': '',
+#     }
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'coursedb1',
-        'USER': 'root',
-        'PASSWORD': '123456',
-        'HOST': '', #port mặc định của local host
+        'NAME': 'bethuandethuong$thuan_apartments_db',
+        'USER': 'bethuandethuong',
+        'PASSWORD': 'thuan@04012004Ab',
+        'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com',
         'PORT': '',
     }
 }
@@ -239,8 +249,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Media files config
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 import os
 from dotenv import load_dotenv
@@ -257,6 +272,19 @@ TWILIO_AUTH_TOKEN = 'bea7072084285a5446b71326d05b5de9'
 TWILIO_PHONE_NUMBER = '+19786432877'
 
 
+# VNPAY_CONFIG = {
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+VNPAY_CONFIG = {
+    "vnp_TmnCode": os.getenv("VNP_TMNCODE"),
+    "vnp_HashSecret": os.getenv("VNP_HASHSECRET"),
+    "vnp_Url": os.getenv("VNP_URL"),
+    "vnp_ReturnUrl": os.getenv("VNP_RETURNURL"),
+}
+
+
 MOCK_MOMO_REDIRECT_URL = "http://thuannguyen.pythonanywhere.com/bills/mock-momo/success/"
 MOCK_MOMO_IPN_URL = "http://nguyennguyen.pythonanywhere.com/bills/mock-momo/webhook/"
 
@@ -265,5 +293,10 @@ MOCK_MOMO_IPN_URL = "http://nguyennguyen.pythonanywhere.com/bills/mock-momo/webh
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+
+# CLIENT_ID = 'NkMjZTSBUvor7dOEN1AAeTvPkioq2ZoBQYqfqrTx'
+# CLIENT_SECRET = 'cQq1QDZzBJOYi5pYitjQ2EMGGITqqaVJEVJrCSabQ6TrPMyBhqYPzUdJMHzWYeYAZNx1NuY1bCYWST3LlWoGA298EMwQAlMtEIehlWIlI5dNbcz6yjXNi16bDxbiuCZM'
+
 CLIENT_ID = 'aPwlnbB1gdvRBos9vtEatNVEQWx8wMA4jbzAQKCc'
 CLIENT_SECRET = '6UK1kV2eeBuG788EOTJfgnBJVrPyZL2PO7LqarE08YPKRHa7zNNK2DHZbr5aL6LkywQNd0isjCM6FmMjxCZdoc10DFezBkwqgXDpDzvFJKXXg4V3avGJwgfAhHP1Rt3y'
+
