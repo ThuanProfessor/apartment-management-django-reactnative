@@ -9,7 +9,7 @@ router.register('apartments', views.ApartmentViewSet)
 router.register('users', views.UserViewSet, basename='users')
 router.register('bills', views.BillViewSet)
 router.register('parking-cards', views.ParkingCardViewSet)
-router.register('card-requests', views.CardRequestViewSet)
+
 router.register('relative-cards', views.RelativeCardViewSet)
 router.register('lockers', views.LockerViewSet)
 router.register('feedbacks', views.FeedbackViewSet)

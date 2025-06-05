@@ -223,8 +223,13 @@ class CardRequestSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'status', 'created_date']
 
     def validate(self, data):
-        if data['type'] == 'relative' and not data.get('relationship'):
-            raise serializers.ValidationError("Mối quan hệ là bắt buộc cho thẻ thân nhân.")
+        type_value = data.get('type', getattr(self.instance, 'type', None))
+
+        if type_value == 'relative':
+            relationship = data.get('relationship') or getattr(self.instance, 'relationship', None)
+            if not relationship:
+                raise serializers.ValidationError("Trường 'relationship' là bắt buộc với thẻ người thân.")
+
         return data
 
 

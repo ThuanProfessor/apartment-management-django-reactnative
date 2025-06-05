@@ -1,5 +1,5 @@
 from urllib import request
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, filters, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -12,6 +12,7 @@ from apartment.models import Apartment, CardRequest, User, RelativeCard, Bill, P
 from apartment import serializers, paginators
 from apartment.permissions import IsAdminOrSelf, IsAdminOnly, IsPasswordChanged, IsResidentOnly
 import logging
+from rest_framework.exceptions import PermissionDenied
 from datetime import datetime
 from django.conf import settings
 from rest_framework.views import APIView
@@ -21,12 +22,15 @@ from django.shortcuts import get_object_or_404
 from .models import Bill, Payment
 from django.shortcuts import render
 from .utils.vnpay_helper import VNPay, get_client_ip
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, SAFE_METHODS, IsAuthenticated
 from .serializers import PaymentRequestSerializer
 from decimal import Decimal
 from apartment.utils.sms_helper import send_sms
 logger = logging.getLogger(__name__)
 from decimal import Decimal
+
+
+
 
 from .serializers import PaymentSerializer
 class AuthViewSet(viewsets.ViewSet):
@@ -86,6 +90,16 @@ class ApartmentViewSet(viewsets.ModelViewSet):
     #     bills = Bill.objects.filter(apartment=apartment)
     #     serializer = serializers.BillSerializer(bills, many=True)
     #     return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'], url_path='residents/(?P<resident_id>[^/.]+)/remove')
+    def remove_resident(self, request, pk=None, resident_id=None):
+        apartment = self.get_object()
+        try:
+            resident = apartment.residents.get(id=resident_id)
+            apartment.residents.remove(resident)
+            return Response({'message': 'Removed successfully'})
+        except:
+            return Response({'error': 'Resident not found'}, status=404)
 
     @action(detail=True, methods=['get'])
     def summary(self, request, pk=None):
@@ -581,37 +595,50 @@ class ParkingCardViewSet(viewsets.ModelViewSet):
 class CardRequestViewSet(viewsets.ModelViewSet):
     queryset = CardRequest.objects.all()
     serializer_class = serializers.CardRequestSerializer
-    permission_classes = [IsAdminOnly]
     pagination_class = paginators.ItemPagination
+    filterset_fields = ['type', 'status']
+
+    def get_permissions(self):
+        if self.request.method in SAFE_METHODS:
+            return [permissions.IsAuthenticated()]  # Cho phép xem GET, HEAD, OPTIONS
+        return [IsAdminOnly()]  # Tất cả hành động khác (POST, PATCH, DELETE) chỉ admin được
 
     def get_queryset(self):
         query = self.queryset
-        status = self.request.query_params.get('status')
-        if status:
-            query = query.filter(status=status)
+        user = self.request.user
+
+        # Nếu không phải admin → chỉ được xem thẻ của chính mình
+        if not getattr(user, 'is_staff', False) and getattr(user, 'role', '') != 'ADMIN':
+            query = query.filter(user=user)
+
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            query = query.filter(status=status_param)
         type_param = self.request.query_params.get('type')
         if type_param:
             query = query.filter(type=type_param)
+
         return query.order_by('-created_date')
 
     def perform_create(self, serializer):
         raise permissions.PermissionDenied("Không thể tạo yêu cầu thẻ trực tiếp qua API này.")
 
     def perform_update(self, serializer):
-        raise permissions.PermissionDenied("Không thể chỉnh sửa yêu cầu thẻ.")
+        raise PermissionDenied("Không thể chỉnh sửa yêu cầu thẻ.")
 
     @action(detail=True, methods=['patch'], permission_classes=[IsAdminOnly])
     def approve(self, request, pk=None):
         card_request = self.get_object()
         if card_request.status != 'pending':
             return Response({'error': 'Yêu cầu đã được xử lý'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         if card_request.type == 'relative':
             RelativeCard.objects.create(
                 resident=card_request.user,
                 name=card_request.name,
                 relationship=card_request.relationship,
-                card_number=f"REL-{card_request.id}-{timezone.now().strftime('%Y%m%d')}"
+                card_number=f"REL-{card_request.id}-{timezone.now().strftime('%Y%m%d')}",
+                active=True  # 👈 THÊM DÒNG NÀY
             )
         elif card_request.type == 'parking':
             ParkingCard.objects.create(
@@ -619,17 +646,17 @@ class CardRequestViewSet(viewsets.ModelViewSet):
                 relative_name=card_request.name,
                 card_code=f"PARK-{card_request.id}-{timezone.now().strftime('%Y%m%d')}"
             )
-        
+
         card_request.status = 'approved'
         card_request.save()
-        
+
         Notification.objects.create(
             user=card_request.user,
             title='Yêu cầu thẻ được duyệt',
             content=f'Yêu cầu {card_request.type} của bạn đã được duyệt.',
             type='system'
         )
-        
+
         serializer = self.get_serializer(card_request)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -638,56 +665,59 @@ class CardRequestViewSet(viewsets.ModelViewSet):
         card_request = self.get_object()
         if card_request.status != 'pending':
             return Response({'error': 'Yêu cầu đã được xử lý'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         card_request.status = 'rejected'
         card_request.save()
-        
+
         Notification.objects.create(
             user=card_request.user,
             title='Yêu cầu thẻ bị từ chối',
             content=f'Yêu cầu {card_request.type} của bạn đã bị từ chối.',
             type='system'
         )
-        
+
         serializer = self.get_serializer(card_request)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 # RelativeCard ViewSet
 class RelativeCardViewSet(viewsets.ModelViewSet):
-    queryset = RelativeCard.objects.filter(active=True)
+    queryset = RelativeCard.objects.all() 
     serializer_class = serializers.RelativeCardSerializer
-    permission_classes = [IsAdminOrSelf]
+    permission_classes = [permissions.IsAuthenticated]
     pagination_class = paginators.ItemPagination
 
     def get_queryset(self):
-        query = self.queryset
-        user_id = self.kwargs.get('user_id') or self.request.user.id
-        query = query.filter(resident_id=user_id)
-        relationship = self.request.query_params.get('relationship')
-        if relationship:
-            query = query.filter(relationship=relationship)
-        return query.order_by('-created_date')
+        user = self.request.user
+        # Nếu là admin thì xem tất cả, cư dân chỉ xem thẻ của mình
+        if user.role == 'ADMIN':
+            return RelativeCard.objects.filter(active=True).order_by('-created_date')
+        return RelativeCard.objects.filter(resident=user, active=True).order_by('-created_date')
 
     def perform_create(self, serializer):
+        # Chỉ admin mới được phép tạo thủ công
         if self.request.user.role != 'ADMIN':
             raise permissions.PermissionDenied("Chỉ admin mới có thể cấp thẻ thân nhân.")
         serializer.save()
-        
+
     @action(detail=False, methods=['post'], permission_classes=[IsResidentOnly])
     def request_card(self, request):
         serializer = serializers.CardRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save(user=request.user, status='pending')
-        
-        Notification.objects.create(
-            user=User.objects.filter(role='ADMIN').first(),  # Gửi cho admin đầu tiên
-            title='Yêu cầu thẻ mới',
-            content=f'Cư dân {request.user.username} đã gửi yêu cầu {serializer.validated_data["type"]}.',
-            type='system'
-        )
-        
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+        # Tạo yêu cầu
+        serializer.save(user=request.user, status='pending')
+
+        # Tạo thông báo gửi cho admin đầu tiên
+        admin_user = User.objects.filter(role='ADMIN').first()
+        if admin_user:
+            Notification.objects.create(
+                user=admin_user,
+                title='Yêu cầu cấp thẻ',
+                content=f'Cư dân {request.user.username} yêu cầu cấp thẻ người thân.',
+                type='system'
+            )
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 # Locker ViewSet
 class LockerViewSet(viewsets.ModelViewSet):
     queryset = Locker.objects.filter(active=True)
@@ -718,14 +748,8 @@ class LockerViewSet(viewsets.ModelViewSet):
             type='system'
         )
 
-<<<<<<< HEAD
+
     def mark_as_received(self, request, pk=None):
-=======
-
-
-    @action(detail=True, methods=['patch'])
-    def mark_received(self, request, pk=None):
->>>>>>> a941503cec4be1bcae3cfc100c5ccfd6a8e54f67
         locker = self.get_object()
         locker.status = 'received'
         locker.received_at = timezone.now()
@@ -801,6 +825,15 @@ class SurveyViewSet(viewsets.ModelViewSet):
         elif active == 'false':
             query = query.filter(Q(end_date__lt=now) | Q(start_date__gt=now))
         return query.order_by('-start_date')
+    
+    @action(detail=True, methods=['get'], permission_classes=[IsAdminOnly])
+    def results_summary(self, request, pk=None):
+        survey = self.get_object()
+        results = SurveyResult.objects.filter(survey=survey)
+        summary = {}
+        for result in results:
+            summary[result.choice] = summary.get(result.choice, 0) + 1
+        return Response(summary)
 
     def perform_create(self, serializer):
         if self.request.user.role != 'ADMIN':
