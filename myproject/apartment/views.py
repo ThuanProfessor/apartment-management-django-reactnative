@@ -2,7 +2,7 @@ from urllib import request
 from rest_framework import viewsets, status, permissions, filters, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.contrib.auth import authenticate, login, logout
 from django.db.models import Q
 from django.contrib.auth.hashers import make_password
@@ -22,12 +22,13 @@ from django.shortcuts import get_object_or_404
 from .models import Bill, Payment
 from django.shortcuts import render
 from .utils.vnpay_helper import VNPay, get_client_ip
-from rest_framework.permissions import AllowAny, SAFE_METHODS, IsAuthenticated
+from rest_framework.permissions import AllowAny, SAFE_METHODS, IsAuthenticated, IsAdminUser
 from .serializers import PaymentRequestSerializer
 from decimal import Decimal
 from apartment.utils.sms_helper import send_sms
 logger = logging.getLogger(__name__)
 from decimal import Decimal
+
 
 
 
@@ -135,11 +136,12 @@ class ApartmentViewSet(viewsets.ModelViewSet):
    
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.filter(active=True)
+    # queryset = User.objects.filter(active=True)
+    queryset = User.objects.all()
     serializer_class = serializers.UserSerializer
     permission_classes = [IsAdminOrSelf, IsPasswordChanged]
     pagination_class = paginators.ItemPagination
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     
 
 
@@ -208,22 +210,13 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(methods=['get'], url_path='current-user', detail=False)
     def get_current_user(self, request):
         return Response(serializers.UserSerializer(request.user).data)
-
-
-    # @action(detail=True, methods=['get'])
-    # def bills(self, request, pk=None):
-    #     user = self.get_object()
-    #     bills = Bill.objects.filter(user=user, active=True)
-    #     status_param = request.query_params.get('status')
-    #     if status_param:
-    #         bills = bills.filter(status=status_param)
-    #     page = self.paginate_queryset(bills)
-    #     if page is not None:
-    #         serializer = serializers.BillSerializer(page, many=True)
-    #         return self.get_paginated_response(serializer.data)
-    #     serializer = serializers.BillSerializer(bills, many=True)
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
-
+    
+    @action(detail=True, methods=['patch'], permission_classes=[IsAdminUser])
+    def lock_account(self, request, pk=None):
+        user = self.get_object()
+        user.is_locked = True
+        user.save()
+        return Response({'status': 'locked'}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def change_pass(self, request):
@@ -317,6 +310,7 @@ class UserViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+    
 # Bill ViewSet
 class BillViewSet(viewsets.ModelViewSet):
     queryset = Bill.objects.filter(active=True)
@@ -804,6 +798,13 @@ class FeedbackViewSet(viewsets.ModelViewSet):
         )
         serializer = self.get_serializer(feedback)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAdminUser])
+    def resolve(self, request, pk=None):
+        feedback = self.get_object()
+        feedback.status = 'resolved'
+        feedback.save()
+        return Response({'status': 'resolved'}, status=status.HTTP_200_OK)
 
 
 # Survey ViewSet

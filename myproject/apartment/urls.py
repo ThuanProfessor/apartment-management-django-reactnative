@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from apartment.views import PaymentView, PaymentReturnView, PaymentIPNView
 
+
 router = DefaultRouter()
 router.register('auth', views.AuthViewSet, basename='auth')
 router.register('apartments', views.ApartmentViewSet)
@@ -51,6 +52,7 @@ urlpatterns = [
     path('api/payment/create/', PaymentView.as_view(), name='payment-create'),
     path('api/payment/return/', PaymentReturnView.as_view(), name='payment-return'),
     path('api/payment/ipn/', PaymentIPNView.as_view(), name='payment-ipn'),
+    
 
 ]
 

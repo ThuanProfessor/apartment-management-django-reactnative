@@ -9,10 +9,15 @@ from apartment.models import ChatMessage, Notification, PaymentAccount, User, Ap
 from django import forms
 from rest_framework import serializers
 
-class ApartmentSerializer(ModelSerializer):
+class ApartmentSerializer(serializers.ModelSerializer):
+    residents_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Apartment
-        fields =  '__all__'
+        fields = ['id', 'number', 'floor', 'residents_count']
+
+    def get_residents_count(self, obj):
+        return obj.residents.filter(role='RESIDENT').count()
 
 
 class ItemSerializer(serializers.ModelSerializer):
@@ -52,9 +57,14 @@ class ItemSerializer(serializers.ModelSerializer):
 
 class UserSerializer(ItemSerializer):
     apartment_number = serializers.CharField(source='apartment.number', read_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'role', 'phone', 'avatar', 'apartment', 'apartment_number', 'active', 'is_first_login']
+        fields = [
+            'id', 'username', 'email', 'role', 'phone', 'avatar',
+            'apartment', 'apartment_number',
+            'active', 'is_first_login', 'is_locked', 'is_active'
+        ]
         extra_kwargs = {'password': {'write_only': True}}
   
     def get_has_completed_setup(self, obj):
@@ -67,12 +77,11 @@ class UserSerializer(ItemSerializer):
         return data
     
     def create(self, validated_data):
-        data = validated_data.copy()
-        u = User(**data)
-        u.set_password(u.password)
-        u.save()
-        
-        return u
+        password = validated_data.pop('password', 'default123')  # tránh lỗi thiếu password
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
     
     def update(self, instance, validated_date):
         if 'password' in validated_date:

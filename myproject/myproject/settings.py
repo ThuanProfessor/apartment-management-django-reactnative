@@ -36,9 +36,9 @@ DEBUG = False
 #     'localhost',
 #     '127.0.0.1'
 # ]
-ALLOWED_HOSTS = ['1ef1-14-187-11-253.ngrok-free.app', '127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['d2b4-113-161-52-173.ngrok-free.app', '127.0.0.1', 'localhost']
 CSRF_TRUSTED_ORIGINS = [
-    'https://1ef1-14-187-11-253.ngrok-free.app',
+    'https://d2b4-113-161-52-173.ngrok-free.app',
     'http://localhost:3000',
     'http://localhost:8000'
 ]
@@ -193,22 +193,18 @@ cloudinary.config(
 #react native gọi api login bằng json
 OAUTH2_PROVIDER = { 'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.OAuthLibCore' }
 
-CLIENT_ID = 'sUchuJ62jEJ2EYS98OOcyk4f07O7ft4TMCbdrdRY'
-CLIENT_SECRET = 'g7OPMrShvrMhbhG85DNN5PnaN6gUVYVLEPapmVylE1SfRLhevp3G7nwDwSYupRIw44DkVroql67KnvHLg2MlU4F3hux80Jz53PCFpXiaSxNAloCbyBDFRpXDFqq1lCha'
+CLIENT_ID = '57pSwmS7lxpwvM35aQVZa4yL3YUOjWk4QXCHkwhW'
+CLIENT_SECRET = '3hGHEuG7YcLw5sZ6Ej5Wt4zd63dc2zsalnHUCThzujaUfT0YvZBzu0LXlvaD1Vic0IGPe19cH7wVhFDcV9XfmT0h07sTCYzC6JO7HYxTHUJXLfEmNpBHImpXmHxSFibt'
     
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
     'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
     'rest_framework.authentication.BasicAuthentication',
+    'rest_framework.parsers.JSONParser',
     )
 }
 
-#Xác thực đăng nhập bằng social account
-# AUTHENTICATION_BACKENDS = [
-    
-#     'allauth.account.auth_backends.AuthennticationBackend', #allauth backend
-    
-# ]
+
 
 #Chứng thực user
 

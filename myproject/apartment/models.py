@@ -26,7 +26,7 @@ class User(AbstractUser, BaseModel):
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='RESIDENT')
     avatar = CloudinaryField('avatar', null=True, blank=True)
     phone = models.CharField(max_length=15, null=True, blank=True)
-    apartment = models.OneToOneField('Apartment', on_delete=models.SET_NULL, null=True, blank=True)
+    apartment = models.ForeignKey('Apartment', on_delete=models.SET_NULL, null=True, blank=True, related_name='residents')
     is_first_login = models.BooleanField(default=True, verbose_name="Lần đầu đăng nhập")
     is_locked = models.BooleanField(default=False, verbose_name="Tài khoản bị khóa")
     lock_reason = models.CharField(max_length=255, null=True, blank=True)
