@@ -8,22 +8,27 @@ from django.db.models import Q
 from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 import cloudinary.uploader
-from apartment.models import Apartment, CardRequest, User, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult, PaymentAccount, Notification, ChatMessage, Payment
+from apartment.models import Apartment, CardRequest, User, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult, PaymentAccount, Notification, ChatMessage, Payment, SurveyFeedback
 from apartment import serializers, paginators
 from apartment.permissions import IsAdminOrSelf, IsAdminOnly, IsPasswordChanged, IsResidentOnly
 import logging
 from rest_framework.exceptions import PermissionDenied
 from datetime import datetime
 from django.conf import settings
+from .models import SurveyQuestion, SurveyChoice, SurveyResult
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets, permissions
 from django.shortcuts import get_object_or_404
 from .models import Bill, Payment
 from django.shortcuts import render
 from .utils.vnpay_helper import VNPay, get_client_ip
 from rest_framework.permissions import AllowAny, SAFE_METHODS, IsAuthenticated, IsAdminUser
+from .permissions import IsResidentOnly, IsAdminOnly
 from .serializers import PaymentRequestSerializer
+from .serializers import (
+    SurveySerializer, SurveyQuestionSerializer, SurveyChoiceSerializer, SurveyResultSerializer, SurveyFeedbackSerializer
+)
 from decimal import Decimal
 from apartment.utils.sms_helper import send_sms
 logger = logging.getLogger(__name__)
@@ -865,69 +870,56 @@ class FeedbackViewSet(viewsets.ModelViewSet):
 
 # Survey ViewSet
 class SurveyViewSet(viewsets.ModelViewSet):
-    queryset = Survey.objects.filter(active=True)
-    serializer_class = serializers.SurveySerializer
-    permission_classes = [permissions.IsAuthenticated]
-    pagination_class = paginators.ItemPagination
+    queryset = Survey.objects.all()
+    serializer_class = SurveySerializer
 
-    def get_queryset(self):
-        query = self.queryset
-        choice = self.request.query_params.get('choice')
-        if choice:
-            query = query.filter(choice=choice)
-        now = timezone.now()
-        active = self.request.query_params.get('active')
-        if active == 'true':
-            query = query.filter(start_date__lte=now, end_date__gte=now)
-        elif active == 'false':
-            query = query.filter(Q(end_date__lt=now) | Q(start_date__gt=now))
-        return query.order_by('-start_date')
-    
-    @action(detail=True, methods=['get'], permission_classes=[IsAdminOnly])
-    def results_summary(self, request, pk=None):
-        survey = self.get_object()
-        results = SurveyResult.objects.filter(survey=survey)
-        summary = {}
-        for result in results:
-            summary[result.choice] = summary.get(result.choice, 0) + 1
-        return Response(summary)
+    def get_permissions(self):
+        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return [IsAuthenticated()]
+        return [IsAdminOnly()]
 
     def perform_create(self, serializer):
-        if self.request.user.role != 'ADMIN':
-            raise permissions.PermissionDenied("Chỉ admin mới có thể tạo khảo sát.")
         serializer.save(created_by=self.request.user)
 
-# SurveyResult ViewSet
-class SurveyResultViewSet(viewsets.ModelViewSet):
-    queryset = SurveyResult.objects.filter(active=True)
-    serializer_class = serializers.SurveyResultSerializer
-    permission_classes = [IsResidentOnly]
-    pagination_class = paginators.ItemPagination
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    def questions(self, request, pk=None):
+        survey = self.get_object()
+        questions = SurveyQuestion.objects.filter(survey=survey)
+        serializer = SurveyQuestionSerializer(questions, many=True)
+        return Response(serializer.data)
 
-    def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
-            return self.queryset
-        
-        if not self.request.user.is_authenticated:
-            return self.queryset.none()
-        
-        query = self.queryset.filter(user=self.request.user)
-        survey_id = self.request.query_params.get('survey_id')
-        if survey_id:
-            query = query.filter(survey_id=survey_id)
-        return query.order_by('-created_date')
+class SurveyQuestionViewSet(viewsets.ModelViewSet):
+    queryset = SurveyQuestion.objects.all()
+    serializer_class = SurveyQuestionSerializer
+    permission_classes = [AllowAny]
+    
+    def create(self, request, *args, **kwargs):
+        print("Dữ liệu gửi tới survey-questions:", request.data)
+        return super().create(request, *args, **kwargs)
+
+
+class SurveyChoiceViewSet(viewsets.ModelViewSet):
+    queryset = SurveyChoice.objects.all()
+    serializer_class = SurveyChoiceSerializer
+    permission_classes = [AllowAny]
+
+
+# Cư dân: trả lời khảo sát
+class SurveyResultViewSet(viewsets.ModelViewSet):
+    queryset = SurveyResult.objects.all()
+    serializer_class = SurveyResultSerializer
+    permission_classes = [AllowAny]
 
     def perform_create(self, serializer):
-        survey_id = self.request.data.get('survey')
-        if SurveyResult.objects.filter(user=self.request.user, survey_id=survey_id).exists():
-            raise permissions.PermissionDenied("Bạn đã tham gia khảo sát này rồi.")
         serializer.save(user=self.request.user)
+        
+class SurveyFeedbackViewSet(viewsets.ModelViewSet):
+    queryset = SurveyFeedback.objects.all()
+    serializer_class = SurveyFeedbackSerializer
+    permission_classes = [IsAuthenticated]
 
-    def perform_update(self, serializer):
-        raise permissions.PermissionDenied("Không thể chỉnh sửa kết quả khảo sát.")
-
-    def perform_destroy(self, instance):
-        raise permissions.PermissionDenied("Không thể xóa kết quả khảo sát.")
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 # Notification ViewSet
 class NotificationViewSet(viewsets.ModelViewSet):

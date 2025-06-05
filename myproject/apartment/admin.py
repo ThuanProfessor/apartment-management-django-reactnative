@@ -1,6 +1,6 @@
 from string import Template
 from django.contrib import admin
-from apartment.models import CardRequest, User, Apartment, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult
+from apartment.models import CardRequest, User, Apartment, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult, SurveyFeedback
 from django.utils.safestring import mark_safe
 from django.template.response import TemplateResponse
 from django.db.models.functions import TruncMonth
@@ -135,11 +135,32 @@ class SurveyAdmin(admin.ModelAdmin):
             return mark_safe(f"<img src='/static/{survey.image.name}' width='100' />")
         return "Không có ảnh"
     
+    
+@admin.register(SurveyFeedback)
+class SurveyFeedbackAdmin(admin.ModelAdmin):
+    list_display = ['id', 'survey', 'user', 'content', 'created_date']
+    search_fields = ['content', 'user__username']
 
 class CardRequestAdmin(admin.ModelAdmin):
     list_display = ['user', 'type', 'name', 'relationship', 'status', 'created_date']
     search_fields = ['user__username', 'name', 'type']
     list_filter = ['type', 'status']
+
+
+@admin.register(SurveyResult)
+class SurveyResultAdmin(admin.ModelAdmin):
+    list_display = ['id', 'survey', 'question_text', 'user', 'choice_text', 'created_date']
+    search_fields = ['survey__title', 'question__text', 'user__username', 'choice__text']
+    list_filter = ['survey', 'user']
+
+    def question_text(self, obj):
+        return obj.question.text if obj.question else 'Không có'
+
+    def choice_text(self, obj):
+        return obj.choice.text if obj.choice else obj.answer_text or 'Không có'
+    
+    question_text.short_description = 'Câu hỏi'
+    choice_text.short_description = 'Câu trả lời'
 
 
 #tạo instance của riêng
@@ -258,6 +279,6 @@ admin_site.register(ParkingCard)
 admin_site.register(Locker, LockerAdmin)
 admin_site.register(Feedback, FeedbackAdmin)
 admin_site.register(Survey, SurveyAdmin)
-admin_site.register(SurveyResult)
+admin_site.register(SurveyResult, SurveyResultAdmin)
 admin_site.register(CardRequest, CardRequestAdmin)
 

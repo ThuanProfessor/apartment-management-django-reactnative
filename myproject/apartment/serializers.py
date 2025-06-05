@@ -5,7 +5,8 @@ from dataclasses import fields
 from re import S, U
 import cloudinary
 from rest_framework.serializers import ModelSerializer
-from apartment.models import ChatMessage, Notification, PaymentAccount, User, Apartment, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyResult
+from apartment.models import ChatMessage, Notification, PaymentAccount, User, Apartment, RelativeCard, Bill, ParkingCard, Locker, Feedback, Survey, SurveyQuestion, SurveyChoice, SurveyResult, SurveyFeedback
+
 from django import forms
 from rest_framework import serializers
 
@@ -169,24 +170,37 @@ class FeedbackSerializer(ItemSerializer):
         fields = ['id', 'user', 'user_name', 'apartment_number', 'content', 'image', 'status', 'response', 'created_date']
         
         
+class SurveyChoiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SurveyChoice
+        fields = ['id', 'text']
+
+
+class SurveyQuestionSerializer(serializers.ModelSerializer):
+    choices = SurveyChoiceSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = SurveyQuestion
+        fields = ['id', 'text', 'choices', 'survey']
+
+
 class SurveySerializer(serializers.ModelSerializer):
-    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
-    
     class Meta:
         model = Survey
-        fields = ['id', 'title', 'choice', 'description', 'created_by', 'created_by_name', 
-                 'start_date', 'end_date', 'active', 'created_date']
+        fields = '__all__'
+        read_only_fields = ['created_by']
 
 
 class SurveyResultSerializer(serializers.ModelSerializer):
-    user_name = serializers.CharField(source='user.username', read_only=True)
-    apartment_number = serializers.CharField(source='user.apartment.number', read_only=True)
-    survey_title = serializers.CharField(source='survey.title', read_only=True)
-    
     class Meta:
         model = SurveyResult
-        fields = ['id', 'user', 'user_name', 'apartment_number', 'survey', 'survey_title', 'answer', 'created_date']
+        fields = ['id', 'survey', 'question', 'choice', 'user']
 
+class SurveyFeedbackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SurveyFeedback
+        fields = '__all__'
+        read_only_fields = ['user']
 
 class NotificationSerializer(serializers.ModelSerializer):
     apartment_number = serializers.CharField(source='user.apartment.number', read_only=True)

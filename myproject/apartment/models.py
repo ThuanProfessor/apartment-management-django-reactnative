@@ -134,30 +134,52 @@ class Feedback(BaseModel):
     
 
 class Survey(BaseModel):
-    SURVEY_CHOICE = (
-        ('Hygiene_issues', 'Vệ sinh'),
-        ('Facilities ', 'Cơ sở vật chất'),
-        ('Service','Dịch vụ'),
-    )
     title = models.CharField(max_length=100)
-    choice = models.CharField(max_length=50, choices=SURVEY_CHOICE, default='Service')
-    description = RichTextField()
+    description = models.TextField(blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='surveys')
     start_date = models.DateTimeField(null=True, blank=True)
     end_date = models.DateTimeField(null=True, blank=True)
-        
+
     def __str__(self):
         return self.title
+    
+class SurveyQuestion(BaseModel):
+    survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name='questions')
+    text = models.TextField()
+
+    def __str__(self):
+        return f"{self.text[:50]}"
+
+
+class SurveyChoice(BaseModel):
+    question = models.ForeignKey(SurveyQuestion, on_delete=models.CASCADE, related_name='choices')
+    text = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"Choice: {self.text}"
     
 
 class SurveyResult(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='survey_results')
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name='results')
-    answer = RichTextField()
+    question = models.ForeignKey(SurveyQuestion, on_delete=models.CASCADE, null=True, blank=True)
+    choice = models.ForeignKey(SurveyChoice, on_delete=models.CASCADE, null=True, blank=True)
+    answer_text = models.TextField(null=True, blank=True)  # Cho câu hỏi mở
+
+    
     
     def __str__(self):
-        return f"Kết quả từ {self.user.username} - {self.survey.title}"
+        question_text = self.question.text[:30] if self.question else "Không có câu hỏi"
+        return f"{self.user.username} - {question_text}"
     
+class SurveyFeedback(BaseModel):
+    survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name='feedbacks')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='survey_feedbacks')
+    content = models.TextField()
+
+    def __str__(self):
+        return f"Ý kiến từ {self.user.username} - Khảo sát {self.survey.title}"
+
 
 class Notification(BaseModel):
     TYPE_CHOICES = (
