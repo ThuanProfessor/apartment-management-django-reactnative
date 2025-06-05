@@ -1166,7 +1166,8 @@ class PaymentView(APIView):
             return Response({'error': 'Không tìm thấy hóa đơn'}, status=status.HTTP_404_NOT_FOUND)
 
 class PaymentReturnView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
 
     def get(self, request):
         input_data = request.GET
