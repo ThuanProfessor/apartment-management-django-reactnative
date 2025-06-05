@@ -165,6 +165,16 @@ DATABASES = {
         'PORT': '',
     }
 }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'bethuandethuong$thuan_apartments_db',
+#         'USER': 'bethuandethuong',
+#         'PASSWORD': 'thuan@04012004Ab',
+#         'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com',
+#         'PORT': '',
+#     }
+# }
 
 # DATABASES = {
 #     'default': {
@@ -193,9 +203,10 @@ cloudinary.config(
 #react native gọi api login bằng json
 OAUTH2_PROVIDER = { 'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.OAuthLibCore' }
 
+
 CLIENT_ID = '57pSwmS7lxpwvM35aQVZa4yL3YUOjWk4QXCHkwhW'
 CLIENT_SECRET = '3hGHEuG7YcLw5sZ6Ej5Wt4zd63dc2zsalnHUCThzujaUfT0YvZBzu0LXlvaD1Vic0IGPe19cH7wVhFDcV9XfmT0h07sTCYzC6JO7HYxTHUJXLfEmNpBHImpXmHxSFibt'
-    
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
     'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
@@ -300,6 +311,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CLIENT_ID = 'NkMjZTSBUvor7dOEN1AAeTvPkioq2ZoBQYqfqrTx'
 # CLIENT_SECRET = 'cQq1QDZzBJOYi5pYitjQ2EMGGITqqaVJEVJrCSabQ6TrPMyBhqYPzUdJMHzWYeYAZNx1NuY1bCYWST3LlWoGA298EMwQAlMtEIehlWIlI5dNbcz6yjXNi16bDxbiuCZM'
+
 
 SILENCED_SYSTEM_CHECKS = ['ckeditor.W001']
 
