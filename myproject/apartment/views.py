@@ -27,8 +27,9 @@ from decimal import Decimal
 from apartment.utils.sms_helper import send_sms
 logger = logging.getLogger(__name__)
 from decimal import Decimal
-
+from datetime import timedelta
 from .serializers import PaymentSerializer
+from rest_framework.parsers import JSONParser
 class AuthViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser]
@@ -266,7 +267,64 @@ class UserViewSet(viewsets.ModelViewSet):
         user.is_first_login = False
         user.save()
         return Response({'message': 'Thiết lập tài khoản hoàn tất.'}, status=status.HTTP_200_OK)
-    
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAdminOnly], parser_classes=[JSONParser])
+    def create_monthly_bills(self, request):
+        # Lấy dữ liệu từ request (nếu có), không có thì dùng mặc định
+        management_fee = request.data.get('management_fee', 500000)
+        service_fee = request.data.get('service_fee', 200000)
+        parking_fee = request.data.get('parking_fee', 300000)
+
+        today = timezone.now()
+        due_date = today + timedelta(days=30)
+        residents = User.objects.filter(role='RESIDENT', apartment__isnull=False)
+        created_bills = []
+
+        for resident in residents:
+            month_str = today.strftime("%m/%Y")
+
+            desc_mgmt = f'Phí quản lý tháng {month_str}'
+            if not Bill.objects.filter(user=resident, bill_type='management_fee', description=desc_mgmt).exists():
+                created_bills.append(Bill(
+                    user=resident,
+                    bill_type='management_fee',
+                    amount=management_fee,
+                    description=desc_mgmt,
+                    payment_method='momo_transfer',
+                    due_date=due_date
+                ))
+
+            desc_service = f'Phí dịch vụ khác tháng {month_str}'
+            if not Bill.objects.filter(user=resident, bill_type='service_fee', description=desc_service).exists():
+                created_bills.append(Bill(
+                    user=resident,
+                    bill_type='service_fee',
+                    amount=service_fee,
+                    description=desc_service,
+                    payment_method='momo_transfer',
+                    due_date=due_date
+                ))
+
+            if resident.parking_card.exists():
+                desc_parking = f'Phí gửi xe tháng {month_str}'
+                if not Bill.objects.filter(user=resident, bill_type='parking_fee', description=desc_parking).exists():
+                    created_bills.append(Bill(
+                        user=resident,
+                        bill_type='parking_fee',
+                        amount=parking_fee,
+                        description=desc_parking,
+                        payment_method='momo_transfer',
+                        due_date=due_date
+                    ))
+
+        Bill.objects.bulk_create(created_bills)
+        return Response({
+            'message': f'✅ Đã tạo {len(created_bills)} hóa đơn.',
+            'management_fee': management_fee,
+            'service_fee': service_fee,
+            'parking_fee': parking_fee
+        }, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=['POST'], permission_classes=[IsAdminOnly])
     def toggle_lock(self, request, pk=None):
         try:
@@ -718,14 +776,9 @@ class LockerViewSet(viewsets.ModelViewSet):
             type='system'
         )
 
-<<<<<<< HEAD
+
     def mark_as_received(self, request, pk=None):
-=======
 
-
-    @action(detail=True, methods=['patch'])
-    def mark_received(self, request, pk=None):
->>>>>>> a941503cec4be1bcae3cfc100c5ccfd6a8e54f67
         locker = self.get_object()
         locker.status = 'received'
         locker.received_at = timezone.now()

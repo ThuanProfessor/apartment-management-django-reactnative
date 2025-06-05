@@ -150,25 +150,26 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 #Database trên PythonAnywhere
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'coursedb1',
-#         'USER': 'root',
-#         'PASSWORD': '123456',
-#         'HOST': '', #port mặc định của local host
-#         'PORT': '',
-#     }
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'bethuandethuong$thuan_apartments_db',
-        'USER': 'bethuandethuong',
-        'PASSWORD': 'thuan@04012004Ab',
-        'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com',
+        'NAME': 'coursedb1',
+        'USER': 'root',
+        'PASSWORD': '123456',
+        'HOST': '', #port mặc định của local host
         'PORT': '',
     }
 }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'bethuandethuong$thuan_apartments_db',
+#         'USER': 'bethuandethuong',
+#         'PASSWORD': 'thuan@04012004Ab',
+#         'HOST': 'bethuandethuong.mysql.pythonanywhere-services.com',
+#         'PORT': '',
+#     }
+# }
 
 #Setting cho Cloudinary
 import cloudinary
@@ -186,8 +187,8 @@ cloudinary.config(
 #react native gọi api login bằng json
 OAUTH2_PROVIDER = { 'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.OAuthLibCore' }
 
-CLIENT_ID = 'c81OcWdfTtyKMGtnTdDbbmRrmfjARgFGphcvXQwy'
-CLIENT_SECRET = 'yHyrcPp7LfKC3dI4pfh1A3bopWltJ84gGDRHCDNwsUpnzM2V4hdNB79qoqa5tkNkUPnSTBw4Br1zRFqs3l2LaUdwTQp4tzaDa00l4BUNrJXdlQHXjRBfjYZjioKBxKMX'
+CLIENT_ID = '9sExt6HYKW9sjcQap4vy55pqj7DzNfbmblvt7e27'
+CLIENT_SECRET = 'b2GkU6PBXrG0GnShwrMdPvRTNI0TlNXUsGsQC79SwSPg1Vc7d5NqkSBkxB9qazCBOufgAZWA6MJ6w9ogL8yfMmj7sWEhlsHAiaM88IgtsgKAATF6R61tejxrppQ4AtPN'
     
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -297,6 +298,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CLIENT_ID = 'NkMjZTSBUvor7dOEN1AAeTvPkioq2ZoBQYqfqrTx'
 # CLIENT_SECRET = 'cQq1QDZzBJOYi5pYitjQ2EMGGITqqaVJEVJrCSabQ6TrPMyBhqYPzUdJMHzWYeYAZNx1NuY1bCYWST3LlWoGA298EMwQAlMtEIehlWIlI5dNbcz6yjXNi16bDxbiuCZM'
 
-CLIENT_ID = 'aPwlnbB1gdvRBos9vtEatNVEQWx8wMA4jbzAQKCc'
-CLIENT_SECRET = '6UK1kV2eeBuG788EOTJfgnBJVrPyZL2PO7LqarE08YPKRHa7zNNK2DHZbr5aL6LkywQNd0isjCM6FmMjxCZdoc10DFezBkwqgXDpDzvFJKXXg4V3avGJwgfAhHP1Rt3y'
+CLIENT_ID = 'FhSzfaLjmRQY0JsLjVPHlFIycmqKOvDB6oClgE3t'
+CLIENT_SECRET = 'TaUh5WF8GFob6ezgDJfjsiLdNcudaOe2ogi00Jym8RLquzORJS65ZgUMvqNDLp9e0EM3hrgYfy3gmUvCCijj9LbwjXJft0MnAD2CUqV10s8mKx0u8CCQmT1D5Wt8Kc0S'
 
