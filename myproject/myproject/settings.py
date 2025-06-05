@@ -281,23 +281,22 @@ VNPAY_CONFIG = {
     "vnp_Url": os.getenv("VNP_URL"),
     "vnp_ReturnUrl": os.getenv("VNP_RETURNURL"),
 }
-TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
-TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
-TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
-SPEEDSMS_API_TOKEN = os.getenv("SPEEDSMS_API_TOKEN")
+TWILIO_ACCOUNT_SID = 'ACe5ceccecadf9bb7905c481db8c24c5bf'
+TWILIO_AUTH_TOKEN = 'bea7072084285a5446b71326d05b5de9'
+TWILIO_PHONE_NUMBER = '+19786432877'
 
 
 # VNPAY_CONFIG = {
-# import os
-# from dotenv import load_dotenv
+import os
+from dotenv import load_dotenv
 
-# load_dotenv()
-# VNPAY_CONFIG = {
-#     "vnp_TmnCode": os.getenv("VNP_TMNCODE"),
-#     "vnp_HashSecret": os.getenv("VNP_HASHSECRET"),
-#     "vnp_Url": os.getenv("VNP_URL"),
-#     "vnp_ReturnUrl": os.getenv("VNP_RETURNURL"),
-# }
+load_dotenv()
+VNPAY_CONFIG = {
+    "vnp_TmnCode": os.getenv("VNP_TMNCODE"),
+    "vnp_HashSecret": os.getenv("VNP_HASHSECRET"),
+    "vnp_Url": os.getenv("VNP_URL"),
+    "vnp_ReturnUrl": os.getenv("VNP_RETURNURL"),
+}
 
 
 MOCK_MOMO_REDIRECT_URL = "http://thuannguyen.pythonanywhere.com/bills/mock-momo/success/"
@@ -307,10 +306,6 @@ MOCK_MOMO_IPN_URL = "http://nguyennguyen.pythonanywhere.com/bills/mock-momo/webh
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-autos-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-
-# CLIENT_ID = 'NkMjZTSBUvor7dOEN1AAeTvPkioq2ZoBQYqfqrTx'
-# CLIENT_SECRET = 'cQq1QDZzBJOYi5pYitjQ2EMGGITqqaVJEVJrCSabQ6TrPMyBhqYPzUdJMHzWYeYAZNx1NuY1bCYWST3LlWoGA298EMwQAlMtEIehlWIlI5dNbcz6yjXNi16bDxbiuCZM'
 
 
 SILENCED_SYSTEM_CHECKS = ['ckeditor.W001']
