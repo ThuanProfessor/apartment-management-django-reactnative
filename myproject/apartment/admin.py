@@ -107,6 +107,7 @@ class FeedbackAdmin(admin.ModelAdmin):
         if feedback.image:
             return mark_safe(f"<img src='/static/{feedback.image.name}' width='100' />")
         return "Không có ảnh"
+    
 
 
 
