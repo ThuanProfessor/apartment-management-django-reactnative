@@ -21,13 +21,6 @@ router.register('payment-accounts', views.PaymentAccountViewSet)
 router.register('card-requests', views.CardRequestViewSet, basename='card-request')
 router.register('upload-avatar', views.UploadAvatarViewSet, basename='upload-avatar')
 
-# router.register('vnpay', views.VNPayViewSet, basename='vnpay')
-
-
-# router.register(r'users/(?P<user_id>\d+)/bills', views.BillViewSet, basename='user-bills')
-# router.register(r'users/(?P<user_id>\d+)/parking-cards', views.ParkingCardViewSet, basename='user-parking-cards')
-# router.register(r'users/(?P<user_id>\d+)/relative-cards', views.RelativeCardViewSet, basename='user-relative-cards')
-# router.register(r'users/(?P<user_id>\d+)/feedbacks', views.FeedbackViewSet, basename='user-feedbacks')
 router.register(r'users/(?P<user_id>\d+)/bills', views.BillViewSet, basename='user-bills')
 router.register(r'users/(?P<user_id>\d+)/parking-cards', views.ParkingCardViewSet, basename='user-parking-cards')
 router.register(r'users/(?P<user_id>\d+)/relative-cards', views.RelativeCardViewSet, basename='user-relative-cards')
@@ -46,8 +39,6 @@ router.register(r'surveys/(?P<survey_id>\d+)/results', views.SurveyResultViewSet
 
 urlpatterns = [
     path('', include(router.urls)),
-    # path('', include('user.urls')),
-    # path('accounts/', include('allauth.urls'))
     path('api/payment/create/', PaymentView.as_view(), name='payment-create'),
     path('api/payment/return/', PaymentReturnView.as_view(), name='payment-return'),
     path('api/payment/ipn/', PaymentIPNView.as_view(), name='payment-ipn'),
